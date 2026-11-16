@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>H Coach – Book intercity coach tickets</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+
+    <nav>
+        <div class="w">
+            <div class="logo" onclick="go('home')">
+                <b>H</b>Coach
+            </div>
+            <div>
+                <span class="l">
+                    <a onclick="go('home')">Book Tickets</a>
+                    <a onclick="go('home')">Routes</a>
+                    <a onclick="toast('Deals: use code FIRSTRIDE for 10% off')">Deals</a>
+                    <a onclick="toast('Support is available 24/7')">Help</a>
+                </span>
+                <a onclick="openTrips()">My Trips</a>
+                <button class="btn" style="margin-left:18px;padding:9px 16px" onclick="toast('Login is a demo feature')">Log in / Sign up</button>
+            </div>
+        </div>
+    </nav>
+
+    <div id="app"></div>
+    <div id="toast"></div>
+    <div id="modal"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>

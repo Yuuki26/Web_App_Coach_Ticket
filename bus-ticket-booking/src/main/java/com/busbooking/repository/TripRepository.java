@@ -25,6 +25,9 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
                       @Param("from") LocalDateTime from,
                       @Param("to") LocalDateTime to);
 
+    /** True when at least one trip departs in the given time window. */
+    boolean existsByDepartureTimeBetween(LocalDateTime from, LocalDateTime to);
+
     /**
      * Loads a trip and locks its row until the transaction ends, so two people
      * booking the same trip at the same moment are handled one after the other.

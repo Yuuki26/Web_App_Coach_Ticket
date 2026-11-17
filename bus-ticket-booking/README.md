@@ -1,21 +1,45 @@
 # H Coach – coach ticket booking
 
-Spring Boot 4.1 · Java 17+ · Spring Web MVC · Spring Data JPA · H2 (in-memory) · Bean Validation.
+Spring Boot 4.1 · Java 17+ · Spring Web MVC · Spring Data JPA · MySQL · Bean Validation.
 The web page (plain HTML, CSS and JavaScript) is served by the same app.
 
 ## Run
 
+The app stores its data in **MySQL**. You need MySQL Server running on `localhost:3306`.
+
+1. Tell the app your MySQL login (once per terminal window; the user defaults to `root`):
+
+   ```bash
+   set DB_PASSWORD=your-mysql-password
+   ```
+
+2. Start it:
+
+   ```bash
+   mvnw.cmd spring-boot:run
+   ```
+
+3. Open http://localhost:8081. (Port 8081 because another Tomcat already uses 8080 on this machine;
+   change `server.port` in `application.properties` if needed.)
+
+The `hcoach` database and its tables are created automatically on first start. `config/DataSeeder.java`
+then adds sample data: 11 cities, 4 operators, every city pair as a route, and 6 trips a day for the next
+14 days (`app.seed.days`). On later starts it only adds trips for days that have none, and it never
+touches riders' bookings. A sample completed booking exists for "Find my booking":
+`HC-48213` / `sam@example.com`.
+
+Settings come from environment variables so no password is stored in the code:
+`DB_USER` (default `root`), `DB_PASSWORD` (default empty), `DB_URL` (default local `hcoach` database).
+
+### Run without MySQL
+
 ```bash
-mvnw.cmd spring-boot:run
+mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=h2
 ```
 
-Then open http://localhost:8081. (Port 8081 because another Tomcat already uses 8080 on this machine;
-change `server.port` in `application.properties` if needed.)
-
-Database console: http://localhost:8081/h2-console (JDBC URL `jdbc:h2:mem:busdb`, user `sa`, empty password).
-Data is in memory and is rebuilt on every start by `config/DataSeeder.java`:
-11 cities, 4 operators, every city pair as a route, 6 trips a day for 14 days (`app.seed.days`).
-A sample completed booking exists for "Find my booking": `HC-48213` / `sam@example.com`.
+This uses a database held in memory: nothing to install, but all data is lost when the app stops.
+The automated tests use this mode too. Its console is at http://localhost:8081/h2-console
+(JDBC URL `jdbc:h2:mem:busdb`, user `sa`, empty password).
 
 ## Structure
 
@@ -66,5 +90,4 @@ Errors are JSON with a `detail` message: `400` invalid input, `404` not found, `
 
 ## Next steps
 
-- Switch H2 to MySQL/PostgreSQL so bookings survive a restart.
 - Add Spring Security for user accounts and an admin area to manage routes, trips and promo codes.

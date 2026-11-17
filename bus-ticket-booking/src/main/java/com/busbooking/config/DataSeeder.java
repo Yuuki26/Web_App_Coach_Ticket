@@ -13,8 +13,11 @@ import com.busbooking.repository.RouteRepository;
 import com.busbooking.repository.TripRepository;
 import com.busbooking.service.PricingService;
 import com.busbooking.service.SeatLayout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,13 +27,21 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Fills the empty in-memory database on startup with the sample data from the H Coach design:
- * its cities, operators, popular routes, and trips for the coming days. All of it is demo data.
+ * Sample data from the H Coach design. Runs on every start and only adds what is missing:
+ * <ul>
+ *   <li>first start (empty database): cities, operators, routes and one sample booking;</li>
+ *   <li>every start: trips for any of the coming days that have none yet, so there is
+ *       always something to search for even when the database is days old.</li>
+ * </ul>
+ * Bookings made by riders are never touched.
  */
 @Component
 public class DataSeeder implements CommandLineRunner {
+
+    private static final Logger log = LoggerFactory.getLogger(DataSeeder.class);
 
     private static final List<String> CITIES = List.of(
             "New York", "Boston", "Los Angeles", "Las Vegas", "San Francisco", "Chicago",
@@ -60,8 +71,6 @@ public class DataSeeder implements CommandLineRunner {
     private final PricingService pricing;
     private final int days;
 
-    private int seedBookingCounter = 10000;
-
     public DataSeeder(RouteRepository routes, OperatorRepository operators, TripRepository trips,
                       BookingRepository bookings, PricingService pricing,
                       @Value("${app.seed.days:14}") int days) {
@@ -76,7 +85,25 @@ public class DataSeeder implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        if (routes.count() > 0) return;
+        if (routes.count() == 0) {
+            seedOperatorsAndRoutes();
+        }
+
+        List<Route> routeList = routes.findAll(Sort.by("id"));
+        List<Operator> ops = operators.findAll(Sort.by("id"));
+        LocalDate today = LocalDate.now();
+        int added = 0;
+        for (int day = 0; day < days; day++) {
+            LocalDate date = today.plusDays(day);
+            if (trips.existsByDepartureTimeBetween(date.atStartOfDay(), date.atTime(LocalTime.MAX))) continue;
+            seedTrips(date, routeList, ops);
+            added++;
+        }
+        if (added > 0) log.info("Added sample trips for {} day(s)", added);
+    }
+
+    private void seedOperatorsAndRoutes() {
+        log.info("Empty database: adding sample operators, routes and trips (first start takes a little longer)");
 
         List<Operator> ops = operators.saveAll(List.of(
                 new Operator("BlueLine Express", "#0F4C81", 4.6),
@@ -91,7 +118,7 @@ public class DataSeeder implements CommandLineRunner {
         }
         for (String from : CITIES) {
             for (String to : CITIES) {
-                if (from.equals(to) || isPopular(from, to)) continue;
+                if (from.equals(to) || popularBetween(from, to) != null) continue;
                 Popular reverse = popularBetween(to, from);
                 int price = reverse != null ? reverse.fromPrice() : 16 + (from.length() * 7 + to.length() * 3) % 24;
                 int minutes = reverse != null ? reverse.minutes() : 210 + (from.length() + to.length()) % 4 * 60;
@@ -100,28 +127,29 @@ public class DataSeeder implements CommandLineRunner {
         }
         routeList = routes.saveAll(routeList);
 
-        LocalDate today = LocalDate.now();
-        for (Route route : routeList) {
-            List<Trip> routeTrips = new ArrayList<>();
-            for (int day = 0; day < days; day++) {
-                for (int i = 0; i < DEPARTURES.length; i++) {
-                    LocalDateTime dep = LocalDateTime.of(today.plusDays(day), DEPARTURES[i]);
-                    routeTrips.add(new Trip(route, ops.get(i % ops.size()), CoachType.values()[i % 3], dep,
-                            dep.plusMinutes(route.getDurationMinutes()),
-                            route.getFromPrice().add(BigDecimal.valueOf(PRICE_ADD[i]))));
-                }
-            }
-            routeTrips = trips.saveAll(routeTrips);
+        // The completed trip from the design, so "Find my booking" has something to find:
+        // HC-48213 / sam@example.com
+        Route route = routeList.stream()
+                .filter(r -> r.getOrigin().equals("Chicago") && r.getDestination().equals("Detroit"))
+                .findFirst().orElseThrow();
+        LocalDateTime dep = LocalDateTime.of(2025, 1, 12, 8, 30);
+        Trip past = trips.save(new Trip(route, ops.get(1), CoachType.STANDARD, dep,
+                dep.plusMinutes(route.getDurationMinutes()), route.getFromPrice()));
+        saveBooking("HC-48213", past, "Sam Rivera", "sam@example.com", List.of("3A"));
+    }
 
-            // Popular routes get some seats already sold, so the seat map shows booked seats.
-            if (route.isPopular()) {
-                for (int n = 0; n < routeTrips.size(); n++) {
-                    seedStationSale(routeTrips.get(n), n % DEPARTURES.length);
-                }
+    private void seedTrips(LocalDate date, List<Route> routeList, List<Operator> ops) {
+        for (Route route : routeList) {
+            for (int i = 0; i < DEPARTURES.length; i++) {
+                LocalDateTime dep = LocalDateTime.of(date, DEPARTURES[i]);
+                Trip trip = trips.save(new Trip(route, ops.get(i % ops.size()), CoachType.values()[i % 3], dep,
+                        dep.plusMinutes(route.getDurationMinutes()),
+                        route.getFromPrice().add(BigDecimal.valueOf(PRICE_ADD[i]))));
+
+                // Popular routes get some seats already sold, so the seat map shows booked seats.
+                if (route.isPopular()) seedStationSale(trip, i);
             }
         }
-
-        seedSampleBooking(routeList, ops.get(1));
     }
 
     private void seedStationSale(Trip trip, int pattern) {
@@ -129,28 +157,18 @@ public class DataSeeder implements CommandLineRunner {
                 .filter(s -> (pattern * 7 + SeatLayout.rowOf(s) * 3 + s.charAt(s.length() - 1)) % 5 == 0)
                 .toList();
         if (seats.isEmpty()) return;
-        save("HC-" + seedBookingCounter++, trip, "Station sale", "station@hcoach.example", seats);
+
+        String code;
+        do {
+            code = "HC-" + ThreadLocalRandom.current().nextInt(10000, 100000);
+        } while (bookings.existsByBookingCode(code));
+        saveBooking(code, trip, "Station sale", "station@hcoach.example", seats);
     }
 
-    /** The completed trip from the design, so "Find my booking" has something to find: HC-48213 / sam@example.com. */
-    private void seedSampleBooking(List<Route> routeList, Operator metroStar) {
-        Route route = routeList.stream()
-                .filter(r -> r.getOrigin().equals("Chicago") && r.getDestination().equals("Detroit"))
-                .findFirst().orElseThrow();
-        LocalDateTime dep = LocalDateTime.of(2025, 1, 12, 8, 30);
-        Trip past = trips.save(new Trip(route, metroStar, CoachType.STANDARD, dep,
-                dep.plusMinutes(route.getDurationMinutes()), route.getFromPrice()));
-        save("HC-48213", past, "Sam Rivera", "sam@example.com", List.of("3A"));
-    }
-
-    private void save(String code, Trip trip, String name, String email, List<String> seats) {
+    private void saveBooking(String code, Trip trip, String name, String email, List<String> seats) {
         QuoteResponse price = pricing.quote(trip, seats, null);
         bookings.save(new Booking(code, trip, name, email, null, seats,
                 price.fare(), price.discount(), price.tax(), price.total(), null, PaymentMethod.CARD));
-    }
-
-    private static boolean isPopular(String from, String to) {
-        return popularBetween(from, to) != null;
     }
 
     private static Popular popularBetween(String from, String to) {

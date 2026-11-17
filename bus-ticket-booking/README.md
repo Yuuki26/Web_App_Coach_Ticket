@@ -49,7 +49,7 @@ src/main/java/com/busbooking
 ├── repository/   Spring Data repositories
 ├── dto/          Request/response records exchanged with the page
 ├── service/      TripService, BookingService, PricingService, SeatLayout
-├── controller/   REST endpoints under /api
+├── controller/   REST endpoints under /api/v1
 ├── exception/    Custom exceptions + JSON error handler
 └── config/       CORS, sample data seeder
 src/main/resources/static
@@ -62,15 +62,15 @@ src/main/resources/static
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/api/cities` | Cities for the From / To dropdowns |
-| GET | `/api/routes/popular` | Popular route cards (cheapest fare, duration) |
-| GET | `/api/trips/search?from=New York&to=Boston&date=2026-11-20` | Trips that day that haven't departed |
-| GET | `/api/trips/{id}` | One trip |
-| GET | `/api/trips/{id}/seats` | Seat plan and booked seats |
-| POST | `/api/bookings/quote` | Price for `{tripId, seats, promoCode}` |
-| POST | `/api/bookings` | Book: `{tripId, passengerName, email, phone, seats, promoCode, paymentMethod}` |
-| POST | `/api/bookings/lookup` | Find a booking by `{bookingCode, email}` |
-| POST | `/api/bookings/cancel` | Cancel a booking by `{bookingCode, email}` |
+| GET | `/api/v1/cities` | Cities for the From / To dropdowns |
+| GET | `/api/v1/routes/popular` | Popular route cards (cheapest fare, duration) |
+| GET | `/api/v1/trips/search?from=New York&to=Boston&date=2026-11-20` | Trips that day that haven't departed |
+| GET | `/api/v1/trips/{id}` | One trip |
+| GET | `/api/v1/trips/{id}/seats` | Seat plan and booked seats |
+| POST | `/api/v1/bookings/quote` | Price for `{tripId, seats, promoCode}` |
+| POST | `/api/v1/bookings` | Book: `{tripId, passengerName, email, phone, seats, promoCode, paymentMethod}` |
+| POST | `/api/v1/bookings/lookup` | Find a booking by `{bookingCode, email}` |
+| POST | `/api/v1/bookings/cancel` | Cancel a booking by `{bookingCode, email}` |
 
 Errors are JSON with a `detail` message: `400` invalid input, `404` not found, `409` seat taken / trip departed.
 

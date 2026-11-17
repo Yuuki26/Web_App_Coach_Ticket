@@ -14,7 +14,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/trips")
+@RequestMapping("/api/v1/trips")
 public class TripController {
 
     private final TripService tripService;
@@ -23,7 +23,7 @@ public class TripController {
         this.tripService = tripService;
     }
 
-    /** GET /api/trips/search?from=New%20York&to=Boston&date=2026-11-20 */
+    /** GET /api/v1/trips/search?from=New%20York&to=Boston&date=2026-11-20 */
     @GetMapping("/search")
     public List<TripResponse> search(@RequestParam String from,
                                      @RequestParam String to,

@@ -1,4 +1,4 @@
-/* H Coach frontend. All data comes from the Spring Boot API under /api. */
+/* H Coach frontend. All data comes from the Spring Boot API under /api/v1. */
 
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 
@@ -8,7 +8,7 @@ const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAl
 async function api(path, body) {
     let res;
     try {
-        res = await fetch('/api' + path, body === undefined ? undefined : {
+        res = await fetch('/api/v1' + path, body === undefined ? undefined : {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)

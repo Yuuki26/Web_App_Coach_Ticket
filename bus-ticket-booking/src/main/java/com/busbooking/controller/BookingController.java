@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
  * so email addresses don't end up in browser history or server logs.
  */
 @RestController
-@RequestMapping("/api/bookings")
+@RequestMapping("/api/v1/bookings")
 public class BookingController {
 
     private final BookingService bookingService;

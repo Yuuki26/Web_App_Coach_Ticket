@@ -6,6 +6,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -55,6 +57,18 @@ public class GlobalExceptionHandler {
                 ? "The request body is missing or is not valid JSON"
                 : ex.getMessage();
         return problem(ErrorCode.BAD_REQUEST, detail);
+    }
+
+    /** Reached when a role check (@PreAuthorize or a URL rule) fails. */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ProblemDetail handleAccessDenied(AccessDeniedException ex) {
+        return problem(ErrorCode.FORBIDDEN, "You don't have permission to do this");
+    }
+
+    /** Reached from the security filter chain (see SecurityConfig) for a missing, expired or bad token. */
+    @ExceptionHandler(AuthenticationException.class)
+    public ProblemDetail handleAuthentication(AuthenticationException ex) {
+        return problem(ErrorCode.UNAUTHORIZED, "Please log in to continue");
     }
 
     /** A database constraint stopped the change, e.g. a unique value that already exists. */

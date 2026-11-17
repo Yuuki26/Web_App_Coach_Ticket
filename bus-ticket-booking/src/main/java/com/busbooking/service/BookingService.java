@@ -6,6 +6,7 @@ import com.busbooking.dto.BookingResponse;
 import com.busbooking.dto.QuoteRequest;
 import com.busbooking.dto.QuoteResponse;
 import com.busbooking.exception.BookingException;
+import com.busbooking.exception.ErrorCode;
 import com.busbooking.exception.NotFoundException;
 import com.busbooking.model.Booking;
 import com.busbooking.model.BookingStatus;
@@ -52,7 +53,7 @@ public class BookingService {
         Trip trip = tripService.getTripForUpdate(req.tripId());
 
         if (trip.getDepartureTime().isBefore(LocalDateTime.now())) {
-            throw new BookingException("This trip has already departed");
+            throw new BookingException(ErrorCode.TRIP_DEPARTED, "This trip has already departed");
         }
 
         List<String> seats = validSeats(req.seats());
@@ -61,7 +62,7 @@ public class BookingService {
                 .sorted(SeatLayout.ORDER)
                 .toList();
         if (!taken.isEmpty()) {
-            throw new BookingException("Seat " + String.join(", ", taken)
+            throw new BookingException(ErrorCode.SEAT_TAKEN, "Seat " + String.join(", ", taken)
                     + (taken.size() > 1 ? " were" : " was") + " just booked by someone else. Please pick again");
         }
 
@@ -86,7 +87,7 @@ public class BookingService {
             throw new BookingException("This booking is already cancelled");
         }
         if (booking.getTrip().getDepartureTime().isBefore(LocalDateTime.now())) {
-            throw new BookingException("This trip has already departed and can't be cancelled");
+            throw new BookingException(ErrorCode.TRIP_DEPARTED, "This trip has already departed and can't be cancelled");
         }
         booking.setStatus(BookingStatus.CANCELLED);
         return BookingResponse.from(booking);

@@ -8,11 +8,16 @@ import com.busbooking.dto.QuoteResponse;
 import com.busbooking.service.BookingService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 /**
  * Lookup and cancel use POST with the email in the body (not the URL),
@@ -34,6 +39,13 @@ public class BookingController {
         return bookingService.quote(request);
     }
 
+    /** The logged-in customer's bookings ("My Trips"). Needs a token. */
+    @GetMapping("/mine")
+    public List<BookingResponse> mine(@AuthenticationPrincipal Jwt jwt) {
+        return bookingService.mine(Long.valueOf(jwt.getSubject()));
+    }
+
+    /** Open to guests; when a token is sent, the booking is saved on that account. */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public BookingResponse create(@Valid @RequestBody BookingRequest request) {

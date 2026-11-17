@@ -21,6 +21,10 @@ public class Booking {
     @ManyToOne(optional = false)
     private Trip trip;
 
+    /** The account that booked, or null for a guest booking (found again by code + email). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    private User customer;
+
     @Column(nullable = false)
     private String passengerName;
 
@@ -80,6 +84,8 @@ public class Booking {
     public Long getId() { return id; }
     public String getBookingCode() { return bookingCode; }
     public Trip getTrip() { return trip; }
+    public User getCustomer() { return customer; }
+    public void setCustomer(User customer) { this.customer = customer; }
     public String getPassengerName() { return passengerName; }
     public String getEmail() { return email; }
     public String getPhone() { return phone; }

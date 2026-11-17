@@ -13,6 +13,8 @@ import com.busbooking.model.BookingStatus;
 import com.busbooking.model.PaymentMethod;
 import com.busbooking.model.Trip;
 import com.busbooking.repository.BookingRepository;
+import com.busbooking.repository.UserRepository;
+import com.busbooking.security.CurrentUser;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,12 +30,14 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final TripService tripService;
     private final PricingService pricingService;
+    private final UserRepository userRepository;
 
     public BookingService(BookingRepository bookingRepository, TripService tripService,
-                          PricingService pricingService) {
+                          PricingService pricingService, UserRepository userRepository) {
         this.bookingRepository = bookingRepository;
         this.tripService = tripService;
         this.pricingService = pricingService;
+        this.userRepository = userRepository;
     }
 
     /** Price breakdown for the chosen seats, without booking anything. */
@@ -71,8 +75,17 @@ public class BookingService {
                 newBookingCode(), trip, req.passengerName().trim(), req.email().trim(), req.phone(), seats,
                 price.fare(), price.discount(), price.tax(), price.total(), price.promoCode(),
                 req.paymentMethod() == null ? PaymentMethod.CARD : req.paymentMethod());
+        // Logged-in customers get the booking on their account; guests keep using code + email.
+        CurrentUser.id().map(userRepository::getReferenceById).ifPresent(booking::setCustomer);
 
         return BookingResponse.from(bookingRepository.save(booking));
+    }
+
+    /** Bookings made while logged in to this account, newest first. */
+    @Transactional(readOnly = true)
+    public List<BookingResponse> mine(Long userId) {
+        return bookingRepository.findByCustomerIdOrderByCreatedAtDesc(userId).stream()
+                .map(BookingResponse::from).toList();
     }
 
     @Transactional(readOnly = true)

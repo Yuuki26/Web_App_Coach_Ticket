@@ -34,17 +34,26 @@ public record PageParams(Integer page, Integer size, List<String> sort) {
         if (p < 1) throw invalid("page must be 1 or more");
         if (!ALLOWED_SIZES.contains(s)) throw invalid("size must be one of 10, 20, 50 or 100");
 
+        // Spring splits "price,desc" into ["price", "desc"], so read the values as a token stream:
+        // a field name starts a new order, "asc"/"desc" sets the direction of the one before it.
         List<Sort.Order> orders = new ArrayList<>();
-        for (String entry : sort == null ? List.<String>of() : sort) {
-            String[] parts = entry.split(",");
-            String field = parts[0].trim();
-            String path = fields.get(field);
-            if (path == null) {
-                throw invalid("Can't sort by '" + field + "'. Use one of: " + String.join(", ", fields.keySet()));
+        for (String raw : sort == null ? List.<String>of() : sort) {
+            for (String token : raw.split(",")) {
+                String t = token.trim();
+                if (t.isEmpty()) continue;
+                String lower = t.toLowerCase(Locale.ROOT);
+                if (lower.equals("asc") || lower.equals("desc")) {
+                    if (orders.isEmpty()) throw invalid("Put a field name before '" + t + "' in sort");
+                    Sort.Order last = orders.remove(orders.size() - 1);
+                    orders.add(lower.equals("asc") ? last.with(Sort.Direction.ASC) : last.with(Sort.Direction.DESC));
+                    continue;
+                }
+                String path = fields.get(t);
+                if (path == null) {
+                    throw invalid("Can't sort by '" + t + "'. Use one of: " + String.join(", ", fields.keySet()));
+                }
+                orders.add(Sort.Order.asc(path));
             }
-            String dir = parts.length > 1 ? parts[1].trim().toLowerCase(Locale.ROOT) : "asc";
-            if (!dir.equals("asc") && !dir.equals("desc")) throw invalid("Sort direction must be asc or desc");
-            orders.add(dir.equals("asc") ? Sort.Order.asc(path) : Sort.Order.desc(path));
         }
         Sort order = orders.isEmpty() ? defaults : Sort.by(orders).and(Sort.by("id")); // id keeps pages stable
         return PageRequest.of(p - 1, s, order);

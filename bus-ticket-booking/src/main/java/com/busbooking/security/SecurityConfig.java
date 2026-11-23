@@ -53,6 +53,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/bookings", "/api/v1/bookings/quote",
                                 "/api/v1/bookings/lookup", "/api/v1/bookings/cancel").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/manage/**").hasAnyRole("MANAGER", "ADMIN")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(rs -> rs
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))

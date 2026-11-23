@@ -28,7 +28,12 @@ public enum ErrorCode {
     SEAT_TAKEN(HttpStatus.CONFLICT),
     TRIP_DEPARTED(HttpStatus.CONFLICT),
     TRIP_CANCELLED(HttpStatus.CONFLICT),
+    /** The record is still used by something active, e.g. a route with upcoming trips. */
     IN_USE(HttpStatus.CONFLICT),
+    /** A value that must be unique already exists, e.g. a plate number. */
+    DUPLICATE(HttpStatus.CONFLICT),
+    /** A scheduling clash, e.g. a coach already on another trip at that time. */
+    SCHEDULE_CONFLICT(HttpStatus.CONFLICT),
     BOOKING_RULE_VIOLATED(HttpStatus.CONFLICT),
     // 500
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR);

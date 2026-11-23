@@ -23,10 +23,16 @@ The app stores its data in **MySQL**. You need MySQL Server running on `localhos
    change `server.port` in `application.properties` if needed.)
 
 The `hcoach` database and its tables are created automatically on first start. `config/DataSeeder.java`
-then adds sample data: 11 cities, 4 operators, every city pair as a route, and 6 trips a day for the next
-14 days (`app.seed.days`). On later starts it only adds trips for days that have none, and it never
-touches riders' bookings. A sample completed booking exists for "Find my booking":
+then adds sample data centred on **Ho Chi Minh City**: intercity routes between the city's bus stations
+(Bến xe Miền Đông mới, Miền Tây, An Sương) and 12 destinations (Đà Lạt, Vũng Tàu, Cần Thơ, Nha Trang,
+Phan Thiết, Châu Đốc, Rạch Giá, Buôn Ma Thuột, Tây Ninh, Bến Tre, Cà Mau, Quy Nhơn) in both directions,
+4 fictional operators with 24 coaches, 4 promo codes, and 6 trips per route per day for the next 14 days
+(`app.seed.days`). All prices are in whole **VND**. On later starts it only adds trips for days that have
+none, and it never touches riders' bookings. A sample completed booking exists for "Find my booking":
 `HC-48213` / `sam@example.com`.
+
+> **Upgrading from an older version?** The tables changed (coaches, promo codes, HCMC data). Drop the old
+> database once so it is rebuilt: `DROP DATABASE hcoach;` in MySQL, then start the app.
 
 Settings come from environment variables so no secret is stored in the code (see `.env.example`):
 
@@ -65,12 +71,14 @@ The automated tests use this mode too (`mvnw.cmd test`). Its console is at http:
 
 ```
 src/main/java/com/busbooking
-├── model/        Route, Operator, Trip, Booking, User, UserToken (+ enums)
-├── repository/   Spring Data repositories
-├── dto/          Request/response records exchanged with the page
-├── service/      TripService, BookingService, PricingService, SeatLayout, AuthService, UserService
+├── model/        Operator, Coach, Route, Trip, Booking, PromoCode, User, UserToken, AuditLog
+│                 (+ Auditable base class with created/updated at/by)
+├── repository/   Spring Data repositories + Specs (search filters)
+├── dto/          Request/response records; PageParams/PageResponse for paged lists; manage/ for staff
+├── service/      TripService, BookingService, PricingService, SeatLayout, AuthService, UserService, AuditService
+│   └── manage/   Operator, Coach, Route, Trip, PromoCode, Booking and User admin services
 ├── security/     SecurityConfig (who may call what), JWT config, TokenService
-├── controller/   REST endpoints under /api/v1
+├── controller/   REST endpoints under /api/v1 (manage/ = manager & admin endpoints)
 ├── exception/    Custom exceptions + JSON error handler
 └── config/       CORS, OpenAPI, sample data and demo account seeders
 src/main/resources/static
@@ -97,7 +105,6 @@ Full, always-current reference: `/swagger-ui.html`. 🔓 = no login needed, 🔒
 | GET 🔒 | `/api/v1/users/me` | Own profile |
 | PATCH 🔒 | `/api/v1/users/me` | `{fullName?, phone?}` |
 | PUT 🔒 | `/api/v1/users/me/password` | `{currentPassword, newPassword}` → logs out every device |
-| GET 🔒 admin | `/api/v1/admin/users` | All users |
 
 Passwords: 8–72 characters with upper- and lower-case letters, a number and a symbol.
 Until real email is added, the verification link is written to the application log (`[dev mail]`).
@@ -108,7 +115,7 @@ Until real email is added, the verification link is written to the application l
 |---|---|---|
 | GET | `/api/v1/cities` | Cities for the From / To dropdowns |
 | GET | `/api/v1/routes/popular` | Popular route cards (cheapest fare, duration) |
-| GET | `/api/v1/trips/search?from=New York&to=Boston&date=2026-11-20` | Trips that day that haven't departed |
+| GET | `/api/v1/trips/search?from=TP. Hồ Chí Minh&to=Đà Lạt&date=2026-11-20` | Scheduled trips that day that haven't departed |
 | GET | `/api/v1/trips/{id}` | One trip |
 | GET | `/api/v1/trips/{id}/seats` | Seat plan and booked seats |
 | POST | `/api/v1/bookings/quote` | Price for `{tripId, seats, promoCode}` |
@@ -116,6 +123,38 @@ Until real email is added, the verification link is written to the application l
 | GET 🔒 | `/api/v1/bookings/mine` | Bookings made while logged in |
 | POST | `/api/v1/bookings/lookup` | Find a booking by `{bookingCode, email}` |
 | POST | `/api/v1/bookings/cancel` | Cancel a booking by `{bookingCode, email}` |
+
+### Management (🔒 manager or admin)
+
+Every list takes `page` (from 1), `size` (10, 20, 50 or 100) and one or more `sort=field,asc|desc`, and
+returns `{content, page, size, totalElements, totalPages, from, to, sort}`; `from`/`to` give
+"Showing 21–40 of 156". Each record includes `audit: {createdAt, createdBy, updatedAt, updatedBy}`.
+Every change is also written to the audit log.
+
+| Resource | Endpoints | Filters | Rules |
+|---|---|---|---|
+| Operators | `/api/v1/manage/operators` GET, POST, `/{id}` GET, PUT, DELETE, `/{id}/restore` POST | q, active, minRating, maxRating, createdFrom, createdTo | Unique name; can't remove while it has coaches in service |
+| Coaches | `/api/v1/manage/coaches` (same set) | q (plate), operatorId, type, status, minSeats, maxSeats, yearFrom, yearTo | Plate like `51B-123.45`, unique; 3–12 rows; with upcoming trips can't be retired, resized, moved or sent to maintenance |
+| Routes | `/api/v1/manage/routes` (same set) | q, origin, destination, active, popular, minPrice, maxPrice, maxDurationMinutes | Different cities; unique pair; with upcoming trips can't be removed or change cities |
+| Trips | `/api/v1/manage/trips` GET, POST, `/{id}` GET, PUT, DELETE (`?reason=`) | routeId, origin, destination, operatorId, coachId, coachType, status, departureFrom/To, minPrice, maxPrice | Future departure; arrival 10 min–48 h later; coach not on an overlapping trip; route fixed once seats are sold; a new coach must have every sold seat; DELETE cancels the trip **and all its bookings** |
+| Promo codes | `/api/v1/manage/promo-codes` (same set as operators) | q, active, validOn, minDiscount, maxDiscount | validTo ≥ validFrom; used codes can't be renamed; limit ≥ uses |
+| Bookings | `/api/v1/manage/bookings` GET, `/{code}` GET | q, status, tripId, routeId, operatorId, departureFrom/To, createdFrom/To | Read-only |
+
+DELETE on operators, coaches, routes and promo codes is a **soft delete** (the record is kept and can be
+restored), so past bookings never lose their history.
+
+### Admin (🔒 admin only)
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/v1/admin/users` | Filters: q, role, status, createdFrom, createdTo |
+| POST | `/api/v1/admin/users` | Create an active, verified account with any role |
+| GET | `/api/v1/admin/users/{id}` | One user |
+| PATCH | `/api/v1/admin/users/{id}/role` | `{role}`; logs the user out |
+| POST | `/api/v1/admin/users/{id}/deactivate` · `/reactivate` | Soft delete / undo; deactivating logs the user out |
+| GET | `/api/v1/admin/audit-logs` | Who changed what. Filters: entityType, entityId, actor, action, from, to |
+
+An admin can't change their own role or deactivate themselves, and the last active admin is protected.
 
 ### Errors
 
@@ -128,7 +167,8 @@ Every error is RFC 7807 JSON with a machine-readable `code`; validation errors a
 
 Codes: `VALIDATION_FAILED`, `BAD_REQUEST`, `INVALID_TOKEN`, `WRONG_PASSWORD` (400) · `UNAUTHORIZED`,
 `INVALID_CREDENTIALS`, `REFRESH_TOKEN_INVALID` (401) · `FORBIDDEN`, `EMAIL_NOT_VERIFIED`, `ACCOUNT_DISABLED` (403) ·
-`NOT_FOUND` (404) · `CONFLICT`, `EMAIL_TAKEN`, `SEAT_TAKEN`, `TRIP_DEPARTED`, `BOOKING_RULE_VIOLATED` (409) ·
+`NOT_FOUND` (404) · `CONFLICT`, `EMAIL_TAKEN`, `SEAT_TAKEN`, `TRIP_DEPARTED`, `TRIP_CANCELLED`, `IN_USE`,
+`DUPLICATE`, `SCHEDULE_CONFLICT`, `BOOKING_RULE_VIOLATED` (409) ·
 `INTERNAL_ERROR` (500).
 
 ## Rules the backend enforces
@@ -136,13 +176,18 @@ Codes: `VALIDATION_FAILED`, `BAD_REQUEST`, `INVALID_TOKEN`, `WRONG_PASSWORD` (40
 - **Login** uses a 15-minute JWT access token (HS256) and a 7-day refresh token. Refresh tokens are
   single-use; replaying an old one revokes all of that user's sessions. Only SHA-256 hashes of refresh and
   verification tokens are stored. Passwords are hashed with BCrypt (cost 12).
-- **Roles**: Customer, Driver, Manager, Admin. New sign-ups are customers; `/api/v1/admin/**` is admin-only.
+- **Roles**: Customer, Driver, Manager, Admin. New sign-ups are customers; `/api/v1/manage/**` needs Manager
+  or Admin, `/api/v1/admin/**` is admin-only.
 - **Security headers**: Content-Security-Policy, X-Frame-Options, X-Content-Type-Options, Referrer-Policy.
   CSRF tokens are not needed because the token travels in a header, not a cookie.
 
-- **Price** is always calculated on the server: seat price, +$5 for rows 1–2, promo discount, then 8% tax.
-  Promo codes live in `PricingService` (`FIRSTRIDE` = 10% off).
-- **Seats** are 9 rows of A–D (`SeatLayout`). A seat can't be booked twice; the trip row is locked while booking.
+- **Price** is always calculated on the server in whole VND: seat price, +30.000 ₫ for rows 1–2, promo
+  discount, then 8% VAT.
+- **Promo codes** (table `promo_codes`) can have start/end dates, a usage limit and a minimum fare. The code's
+  row is locked while booking so a limited code can't be over-used. Samples: `FIRSTRIDE` 10%, `WEEKEND` 15%
+  on fares ≥ 300.000 ₫, `TET2027` (not valid yet), `HELLOSAIGON` (expired).
+- **Seats** are rows of A–D; the number of rows comes from the coach (3–12). A seat can't be booked twice; the
+  trip row is locked while booking. At most 6 seats per booking. Cancelled trips can't be booked.
 - **Bookings** can only be viewed or cancelled with both the booking code and the matching email.
 - **Status** shown as Upcoming / Completed / Cancelled; Completed means the departure time has passed.
 
@@ -150,9 +195,10 @@ Codes: `VALIDATION_FAILED`, `BAD_REQUEST`, `INVALID_TOKEN`, `WRONG_PASSWORD` (40
 
 - Login / sign up screens on the bundled page (the API exists; the page still uses booking codes for My Trips).
 - Real payment. The card fields on the page are never read or sent; a booking is confirmed without charging.
-- Confirmation emails, the WEEKEND and FAMILY deals, and the "24 hours before departure" cancellation limit.
+- Confirmation emails, the FAMILY deal, and the "24 hours before departure" cancellation limit.
+- The bundled page still has US-themed marketing text (hero, reviews, deals); prices and stations are real data.
 
 ## Next steps
 
-See `../docs/BACKEND_PLAN.md`. Next: admin area to manage users, routes, coaches, trips and promo codes,
-with paging, filters, soft delete and an audit trail.
+See `../docs/BACKEND_PLAN.md`. Next (phase 3): booking holds that expire, cancellation/refund policy,
+dynamic pricing, trip status workflow (boarding → departed → arrived), driver assignment and passenger lists.

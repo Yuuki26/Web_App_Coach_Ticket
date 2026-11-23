@@ -25,8 +25,13 @@ public final class RouteDtos {
             @NotNull @Min(1) @Max(3000) Integer distanceKm,
             @NotNull @Min(10) @Max(2880) Integer durationMinutes,
             @NotNull @DecimalMin("10000") @DecimalMax("10000000") BigDecimal fromPrice,
-            boolean popular
+            /** Optional; false when left out. */
+            Boolean popular
     ) {
+        public boolean isPopular() {
+            return Boolean.TRUE.equals(popular);
+        }
+
         /** Cross-field rule: a route must go somewhere else. */
         @AssertTrue(message = "origin and destination must be different cities")
         public boolean isDifferentCities() {

@@ -70,7 +70,7 @@ public class RouteAdminService {
         }
         Route route = routes.save(new Route(origin, destination, req.originStation().trim(),
                 req.destinationStation().trim(), req.distanceKm(), req.durationMinutes(), req.fromPrice(),
-                req.popular()));
+                req.isPopular()));
         audit.record(ENTITY, route.getId(), AuditAction.CREATE, origin + " → " + destination);
         return toResponse(route);
     }
@@ -97,7 +97,7 @@ public class RouteAdminService {
         route.setDistanceKm(c.track("distanceKm", route.getDistanceKm(), req.distanceKm()));
         route.setDurationMinutes(c.track("durationMinutes", route.getDurationMinutes(), req.durationMinutes()));
         route.setFromPrice(c.track("fromPrice", route.getFromPrice(), req.fromPrice()));
-        route.setPopular(c.track("popular", route.isPopular(), req.popular()));
+        route.setPopular(c.track("popular", route.isPopular(), req.isPopular()));
         if (!c.isEmpty()) audit.record(ENTITY, id, AuditAction.UPDATE, c.toString());
         return toResponse(route);
     }

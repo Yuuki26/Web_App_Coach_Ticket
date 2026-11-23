@@ -246,7 +246,7 @@ class AuthApiTests {
                 .andExpect(status().isForbidden());
         mvc.perform(get("/api/v1/admin/users").header("Authorization", bearer(login("admin@test.com", "Admin123!"))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[?(@.email == 'admin@test.com')]").exists());
+                .andExpect(jsonPath("$.content[?(@.user.email == 'admin@test.com')]").exists());
     }
 
     // ---------- bookings on the account ----------

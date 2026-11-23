@@ -11,15 +11,13 @@ import com.busbooking.repository.UserRepository;
 import com.busbooking.repository.UserTokenRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
-/** The logged-in user's own profile, plus the admin's user list. */
+/** The logged-in user's own profile. Admin user management is in UserAdminService. */
 @Service
 public class UserService {
 
@@ -61,12 +59,6 @@ public class UserService {
         user.setPasswordHash(passwordEncoder.encode(req.newPassword()));
         tokens.revokeAll(user, TokenType.REFRESH, LocalDateTime.now());
         log.info("Password changed for user {}", userId);
-    }
-
-    /** Admin view. Full user management (create, deactivate, change role, paging) comes in phase 2. */
-    @Transactional(readOnly = true)
-    public List<UserResponse> listAll() {
-        return users.findAll(Sort.by("id")).stream().map(UserResponse::from).toList();
     }
 
     private User get(Long id) {

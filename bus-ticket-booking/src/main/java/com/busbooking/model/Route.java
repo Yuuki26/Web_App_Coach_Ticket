@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 
 @Entity
 @Table(name = "routes", uniqueConstraints = @UniqueConstraint(columnNames = {"origin", "destination"}))
-public class Route {
+public class Route extends Auditable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

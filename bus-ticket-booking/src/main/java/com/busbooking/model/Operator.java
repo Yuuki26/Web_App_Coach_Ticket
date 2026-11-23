@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 /** A coach company that runs trips. */
 @Entity
 @Table(name = "operators")
-public class Operator {
+public class Operator extends Auditable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

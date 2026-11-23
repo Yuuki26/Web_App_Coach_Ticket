@@ -3,13 +3,12 @@ package com.busbooking.model;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table(name = "bookings")
-public class Booking {
+public class Booking extends Auditable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -60,8 +59,6 @@ public class Booking {
     @Column(nullable = false)
     private BookingStatus status = BookingStatus.CONFIRMED;
 
-    private LocalDateTime createdAt = LocalDateTime.now();
-
     protected Booking() {}
 
     public Booking(String bookingCode, Trip trip, String passengerName, String email, String phone,
@@ -98,5 +95,4 @@ public class Booking {
     public PaymentMethod getPaymentMethod() { return paymentMethod; }
     public BookingStatus getStatus() { return status; }
     public void setStatus(BookingStatus status) { this.status = status; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
 }

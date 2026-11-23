@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 /** A scheduled departure of one operator's coach on a route. */
 @Entity
 @Table(name = "trips", indexes = @Index(columnList = "route_id, departureTime"))
-public class Trip {
+public class Trip extends Auditable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

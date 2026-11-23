@@ -41,6 +41,19 @@ public interface TripRepository extends JpaRepository<Trip, Long>, JpaSpecificat
     long countByCoachAndStatusAndDepartureTimeAfter(Coach coach, TripStatus status, LocalDateTime after);
 
     /**
+     * Scheduled trips of this coach whose time overlaps [departure, arrival), ignoring trip
+     * {@code excludeId} (the one being edited; pass -1 when creating).
+     */
+    @Query("""
+            select t from Trip t
+            where t.coach = :coach and t.status = com.busbooking.model.TripStatus.SCHEDULED and t.id <> :excludeId
+              and t.departureTime < :arrival and t.arrivalTime > :departure
+            order by t.departureTime
+            """)
+    List<Trip> findOverlapping(@Param("coach") Coach coach, @Param("departure") LocalDateTime departure,
+                               @Param("arrival") LocalDateTime arrival, @Param("excludeId") Long excludeId);
+
+    /**
      * Loads a trip and locks its row until the transaction ends, so two people
      * booking the same trip at the same moment are handled one after the other.
      */

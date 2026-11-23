@@ -1,14 +1,18 @@
 package com.busbooking.config;
 
-import com.busbooking.dto.QuoteResponse;
 import com.busbooking.model.Booking;
+import com.busbooking.model.Coach;
+import com.busbooking.model.CoachStatus;
 import com.busbooking.model.CoachType;
 import com.busbooking.model.Operator;
 import com.busbooking.model.PaymentMethod;
+import com.busbooking.model.PromoCode;
 import com.busbooking.model.Route;
 import com.busbooking.model.Trip;
 import com.busbooking.repository.BookingRepository;
+import com.busbooking.repository.CoachRepository;
 import com.busbooking.repository.OperatorRepository;
+import com.busbooking.repository.PromoCodeRepository;
 import com.busbooking.repository.RouteRepository;
 import com.busbooking.repository.TripRepository;
 import com.busbooking.service.PricingService;
@@ -30,54 +34,72 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Sample data from the H Coach design. Runs on every start and only adds what is missing:
+ * Sample data centred on Ho Chi Minh City: intercity coach routes between HCMC's bus stations
+ * (Miền Đông mới, Miền Tây, An Sương) and 12 destinations, in both directions. Operators are
+ * fictional. Prices are in VND. Runs on every start and only adds what is missing:
  * <ul>
- *   <li>first start (empty database): cities, operators, routes and one sample booking;</li>
- *   <li>every start: trips for any of the coming days that have none yet, so there is
- *       always something to search for even when the database is days old.</li>
+ *   <li>first start (empty database): operators, coaches, routes, promo codes, one sample booking;</li>
+ *   <li>every start: trips for any of the coming days that have none yet.</li>
  * </ul>
- * Bookings made by riders are never touched.
+ * Riders' bookings are never touched.
  */
 @Component
 public class DataSeeder implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DataSeeder.class);
 
-    private static final List<String> CITIES = List.of(
-            "New York", "Boston", "Los Angeles", "Las Vegas", "San Francisco", "Chicago",
-            "Detroit", "Miami", "Orlando", "Seattle", "Portland");
+    public static final String HCMC = "TP. Hồ Chí Minh";
+    private static final String MIEN_DONG = "Bến xe Miền Đông mới";
+    private static final String MIEN_TAY = "Bến xe Miền Tây";
+    private static final String AN_SUONG = "Bến xe An Sương";
 
-    /** origin, destination, cheapest fare, duration in minutes. */
-    private record Popular(String origin, String destination, int fromPrice, int minutes) {}
+    /** A destination served from HCMC: station used in HCMC, station at the other end, km, minutes, cheapest fare. */
+    private record Line(String city, String hcmcStation, String cityStation, int km, int minutes, int fromPrice,
+                        boolean popular) {}
 
-    private static final List<Popular> POPULAR = List.of(
-            new Popular("New York", "Boston", 24, 270),
-            new Popular("Los Angeles", "Las Vegas", 29, 255),
-            new Popular("San Francisco", "Los Angeles", 39, 490),
-            new Popular("Chicago", "Detroit", 22, 320),
-            new Popular("Miami", "Orlando", 27, 230),
-            new Popular("Seattle", "Portland", 19, 210));
+    private static final List<Line> LINES = List.of(
+            new Line("Đà Lạt", MIEN_DONG, "Bến xe Liên tỉnh Đà Lạt", 308, 420, 280_000, true),
+            new Line("Vũng Tàu", MIEN_DONG, "Bến xe Vũng Tàu", 125, 150, 160_000, true),
+            new Line("Cần Thơ", MIEN_TAY, "Bến xe Trung tâm Cần Thơ", 170, 210, 165_000, true),
+            new Line("Nha Trang", MIEN_DONG, "Bến xe phía Nam Nha Trang", 430, 510, 290_000, true),
+            new Line("Phan Thiết", MIEN_DONG, "Bến xe Phan Thiết", 200, 240, 190_000, true),
+            new Line("Châu Đốc", MIEN_TAY, "Bến xe Châu Đốc", 250, 360, 220_000, true),
+            new Line("Rạch Giá", MIEN_TAY, "Bến xe Rạch Giá", 250, 330, 230_000, false),
+            new Line("Buôn Ma Thuột", MIEN_DONG, "Bến xe phía Bắc Buôn Ma Thuột", 350, 480, 260_000, false),
+            new Line("Tây Ninh", AN_SUONG, "Bến xe Tây Ninh", 100, 150, 90_000, false),
+            new Line("Bến Tre", MIEN_TAY, "Bến xe Bến Tre", 85, 120, 95_000, false),
+            new Line("Cà Mau", MIEN_TAY, "Bến xe Cà Mau", 300, 480, 250_000, false),
+            new Line("Quy Nhơn", MIEN_DONG, "Bến xe Quy Nhơn", 650, 720, 400_000, false));
 
-    /** Six departures a day; each adds a different amount to the route's cheapest fare. */
+    /** Six departures a day; each adds a different amount (VND) to the route's cheapest fare. */
     private static final LocalTime[] DEPARTURES = {
             LocalTime.of(6, 0), LocalTime.of(8, 30), LocalTime.of(11, 0),
             LocalTime.of(14, 15), LocalTime.of(18, 0), LocalTime.of(21, 30)};
-    private static final int[] PRICE_ADD = {3, 15, 7, 19, 0, 11};
+    private static final int[] PRICE_ADD = {20_000, 60_000, 30_000, 80_000, 0, 40_000};
+
+    /** Rows per coach type: standard 9 rows (36 seats), premium 6 (24), sleeper 10 (40 berths). */
+    private static final CoachType[] TYPES = {CoachType.STANDARD, CoachType.PREMIUM, CoachType.SLEEPER};
+    private static final int[] ROWS = {9, 6, 10};
+    private static final int COACHES_PER_OPERATOR = 6;
 
     private final RouteRepository routes;
     private final OperatorRepository operators;
+    private final CoachRepository coaches;
     private final TripRepository trips;
     private final BookingRepository bookings;
+    private final PromoCodeRepository promoCodes;
     private final PricingService pricing;
     private final int days;
 
-    public DataSeeder(RouteRepository routes, OperatorRepository operators, TripRepository trips,
-                      BookingRepository bookings, PricingService pricing,
-                      @Value("${app.seed.days:14}") int days) {
+    public DataSeeder(RouteRepository routes, OperatorRepository operators, CoachRepository coaches,
+                      TripRepository trips, BookingRepository bookings, PromoCodeRepository promoCodes,
+                      PricingService pricing, @Value("${app.seed.days:14}") int days) {
         this.routes = routes;
         this.operators = operators;
+        this.coaches = coaches;
         this.trips = trips;
         this.bookings = bookings;
+        this.promoCodes = promoCodes;
         this.pricing = pricing;
         this.days = days;
     }
@@ -86,64 +108,86 @@ public class DataSeeder implements CommandLineRunner {
     @Transactional
     public void run(String... args) {
         if (routes.count() == 0) {
-            seedOperatorsAndRoutes();
+            seedBaseData();
         }
 
-        List<Route> routeList = routes.findAll(Sort.by("id"));
-        List<Operator> ops = operators.findAll(Sort.by("id"));
+        List<Route> routeList = routes.findAll(Sort.by("id")).stream().filter(Route::isActive).toList();
+        List<Coach> fleet = coaches.findAll(Sort.by("id")).stream()
+                .filter(c -> c.getStatus() == CoachStatus.ACTIVE).toList();
+        if (routeList.isEmpty() || fleet.isEmpty()) return;
+
         LocalDate today = LocalDate.now();
         int added = 0;
         for (int day = 0; day < days; day++) {
             LocalDate date = today.plusDays(day);
             if (trips.existsByDepartureTimeBetween(date.atStartOfDay(), date.atTime(LocalTime.MAX))) continue;
-            seedTrips(date, routeList, ops);
+            seedTrips(date, routeList, fleet);
             added++;
         }
         if (added > 0) log.info("Added sample trips for {} day(s)", added);
     }
 
-    private void seedOperatorsAndRoutes() {
-        log.info("Empty database: adding sample operators, routes and trips (first start takes a little longer)");
+    private void seedBaseData() {
+        log.info("Empty database: adding HCMC sample operators, coaches, routes and trips");
 
         List<Operator> ops = operators.saveAll(List.of(
-                new Operator("BlueLine Express", "#0F4C81", 4.6),
-                new Operator("Metro Star", "#7C3AED", 4.3),
-                new Operator("GreenWay Lines", "#22A06B", 4.8),
-                new Operator("Sunset Coach", "#E8590C", 4.1)));
+                new Operator("Sao Việt Express", "#0F4C81", 4.6, "1900 6001", "hotro@saovietexpress.example"),
+                new Operator("Mekong Xanh", "#22A06B", 4.4, "1900 6002", "cskh@mekongxanh.example"),
+                new Operator("Cao Nguyên Limousine", "#7C3AED", 4.8, "1900 6003", "booking@caonguyen.example"),
+                new Operator("Biển Xanh Coach", "#E8590C", 4.2, "1900 6004", "lienhe@bienxanh.example")));
 
-        // Popular routes first so they keep the order of the design's cards.
-        List<Route> routeList = new ArrayList<>();
-        for (Popular p : POPULAR) {
-            routeList.add(new Route(p.origin(), p.destination(), p.minutes(), BigDecimal.valueOf(p.fromPrice()), true));
-        }
-        for (String from : CITIES) {
-            for (String to : CITIES) {
-                if (from.equals(to) || popularBetween(from, to) != null) continue;
-                Popular reverse = popularBetween(to, from);
-                int price = reverse != null ? reverse.fromPrice() : 16 + (from.length() * 7 + to.length() * 3) % 24;
-                int minutes = reverse != null ? reverse.minutes() : 210 + (from.length() + to.length()) % 4 * 60;
-                routeList.add(new Route(from, to, minutes, BigDecimal.valueOf(price), false));
+        List<Coach> fleet = new ArrayList<>();
+        int n = 0;
+        for (Operator op : ops) {
+            for (int i = 0; i < COACHES_PER_OPERATOR; i++, n++) {
+                int t = i % TYPES.length;
+                // HCMC passenger-coach plates look like 51B-123.45
+                String plate = "51B-%03d.%02d".formatted(100 + n * 37 % 900, 10 + n * 13 % 90);
+                fleet.add(new Coach(plate, op, TYPES[t], ROWS[t], 2019 + n % 7));
             }
+        }
+        fleet = coaches.saveAll(fleet);
+        fleet.get(fleet.size() - 1).setStatus(CoachStatus.MAINTENANCE); // one coach in the workshop
+
+        List<Route> routeList = new ArrayList<>();
+        for (Line l : LINES) {
+            BigDecimal price = BigDecimal.valueOf(l.fromPrice());
+            routeList.add(new Route(HCMC, l.city(), l.hcmcStation(), l.cityStation(), l.km(), l.minutes(), price, l.popular()));
+            routeList.add(new Route(l.city(), HCMC, l.cityStation(), l.hcmcStation(), l.km(), l.minutes(), price, false));
         }
         routeList = routes.saveAll(routeList);
 
-        // The completed trip from the design, so "Find my booking" has something to find:
-        // HC-48213 / sam@example.com
-        Route route = routeList.stream()
-                .filter(r -> r.getOrigin().equals("Chicago") && r.getDestination().equals("Detroit"))
+        LocalDate today = LocalDate.now();
+        promoCodes.saveAll(List.of(
+                new PromoCode("FIRSTRIDE", "10% off your first ride", 10, null, null, null, null),
+                new PromoCode("WEEKEND", "15% off fares of 300.000 ₫ or more", 15,
+                        today.minusDays(7), today.plusDays(60), 500, new BigDecimal("300000")),
+                new PromoCode("TET2027", "20% off for Tết 2027 travel", 20,
+                        LocalDate.of(2027, 1, 20), LocalDate.of(2027, 2, 20), 1000, null),
+                new PromoCode("HELLOSAIGON", "Launch offer (ended)", 25,
+                        LocalDate.of(2026, 6, 1), LocalDate.of(2026, 8, 31), 200, null)));
+
+        // A completed trip, so "Find my booking" has something to find: HC-48213 / sam@example.com
+        Route canTho = routeList.stream()
+                .filter(r -> r.getOrigin().equals(HCMC) && r.getDestination().equals("Cần Thơ"))
                 .findFirst().orElseThrow();
         LocalDateTime dep = LocalDateTime.of(2025, 1, 12, 8, 30);
-        Trip past = trips.save(new Trip(route, ops.get(1), CoachType.STANDARD, dep,
-                dep.plusMinutes(route.getDurationMinutes()), route.getFromPrice()));
-        saveBooking("HC-48213", past, "Sam Rivera", "sam@example.com", List.of("3A"));
+        Trip past = trips.save(new Trip(canTho, fleet.get(1), dep, dep.plusMinutes(canTho.getDurationMinutes()),
+                canTho.getFromPrice()));
+        saveBooking("HC-48213", past, "Sam Nguyen", "sam@example.com", List.of("3A"));
     }
 
-    private void seedTrips(LocalDate date, List<Route> routeList, List<Operator> ops) {
-        for (Route route : routeList) {
+    /** Each pair of routes (out and back) is run by one operator; departures rotate through its coaches. */
+    private void seedTrips(LocalDate date, List<Route> routeList, List<Coach> fleet) {
+        List<Long> operatorIds = fleet.stream().map(c -> c.getOperator().getId()).distinct().toList();
+        for (int r = 0; r < routeList.size(); r++) {
+            Route route = routeList.get(r);
+            Long operatorId = operatorIds.get((r / 2) % operatorIds.size());
+            List<Coach> own = fleet.stream().filter(c -> c.getOperator().getId().equals(operatorId)).toList();
             for (int i = 0; i < DEPARTURES.length; i++) {
+                Coach coach = own.get((i + r) % own.size());
                 LocalDateTime dep = LocalDateTime.of(date, DEPARTURES[i]);
-                Trip trip = trips.save(new Trip(route, ops.get(i % ops.size()), CoachType.values()[i % 3], dep,
-                        dep.plusMinutes(route.getDurationMinutes()),
+                Trip trip = trips.save(new Trip(route, coach, dep, dep.plusMinutes(route.getDurationMinutes()),
                         route.getFromPrice().add(BigDecimal.valueOf(PRICE_ADD[i]))));
 
                 // Popular routes get some seats already sold, so the seat map shows booked seats.
@@ -153,7 +197,7 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void seedStationSale(Trip trip, int pattern) {
-        List<String> seats = SeatLayout.allSeats().stream()
+        List<String> seats = SeatLayout.allSeats(trip.getCoach().getSeatRows()).stream()
                 .filter(s -> (pattern * 7 + SeatLayout.rowOf(s) * 3 + s.charAt(s.length() - 1)) % 5 == 0)
                 .toList();
         if (seats.isEmpty()) return;
@@ -162,18 +206,12 @@ public class DataSeeder implements CommandLineRunner {
         do {
             code = "HC-" + ThreadLocalRandom.current().nextInt(10000, 100000);
         } while (bookings.existsByBookingCode(code));
-        saveBooking(code, trip, "Station sale", "station@hcoach.example", seats);
+        saveBooking(code, trip, "Bán tại quầy", "quay@hcoach.example", seats);
     }
 
     private void saveBooking(String code, Trip trip, String name, String email, List<String> seats) {
-        QuoteResponse price = pricing.quote(trip, seats, null);
+        var price = pricing.quote(trip, seats, null);
         bookings.save(new Booking(code, trip, name, email, null, seats,
                 price.fare(), price.discount(), price.tax(), price.total(), null, PaymentMethod.CARD));
-    }
-
-    private static Popular popularBetween(String from, String to) {
-        return POPULAR.stream()
-                .filter(p -> p.origin().equals(from) && p.destination().equals(to))
-                .findFirst().orElse(null);
     }
 }

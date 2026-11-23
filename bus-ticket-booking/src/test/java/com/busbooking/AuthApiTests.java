@@ -1,5 +1,6 @@
 package com.busbooking;
 
+import com.busbooking.config.DataSeeder;
 import com.busbooking.dto.TripResponse;
 import com.busbooking.model.User;
 import com.busbooking.model.UserStatus;
@@ -256,9 +257,10 @@ class AuthApiTests {
         registerVerified(email);
         String auth = bearer(login(email, PASSWORD));
 
-        TripResponse trip = tripService.search("Miami", "Orlando", LocalDate.now().plusDays(4)).get(0);
-        List<String> booked = tripService.seatMap(trip.id()).bookedSeats();
-        List<String> free = SeatLayout.allSeats().stream().filter(s -> !booked.contains(s)).limit(2).toList();
+        TripResponse trip = tripService.search(DataSeeder.HCMC, "Cần Thơ", LocalDate.now().plusDays(4)).get(0);
+        var map = tripService.seatMap(trip.id());
+        List<String> booked = map.bookedSeats();
+        List<String> free = SeatLayout.allSeats(map.rows()).stream().filter(s -> !booked.contains(s)).limit(2).toList();
 
         String body = "{\"tripId\":" + trip.id() + ",\"passengerName\":\"Riley Park\",\"email\":\"" + email
                 + "\",\"seats\":[\"%s\"]}";

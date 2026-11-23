@@ -36,7 +36,7 @@ public class TripService {
     }
 
     public List<PopularRouteResponse> popularRoutes() {
-        return routeRepository.findByPopularTrueOrderById().stream().map(PopularRouteResponse::from).toList();
+        return routeRepository.findByPopularTrueAndActiveTrueOrderById().stream().map(PopularRouteResponse::from).toList();
     }
 
     /** Trips on the given day that have not departed yet. */
@@ -54,9 +54,9 @@ public class TripService {
     }
 
     public SeatMapResponse seatMap(Long tripId) {
-        getTrip(tripId);
+        Trip trip = getTrip(tripId);
         List<String> booked = bookedSeats(tripId).stream().sorted(SeatLayout.ORDER).toList();
-        return new SeatMapResponse(tripId, SeatLayout.ROWS, SeatLayout.COLUMNS,
+        return new SeatMapResponse(tripId, trip.getCoach().getSeatRows(), SeatLayout.COLUMNS,
                 SeatLayout.LEGROOM_ROWS, SeatLayout.LEGROOM_SURCHARGE, booked);
     }
 
@@ -75,6 +75,6 @@ public class TripService {
     }
 
     private TripResponse toResponse(Trip trip) {
-        return TripResponse.from(trip, SeatLayout.TOTAL_SEATS - bookedSeats(trip.getId()).size());
+        return TripResponse.from(trip, trip.getCoach().capacity() - bookedSeats(trip.getId()).size());
     }
 }

@@ -27,6 +27,8 @@ public enum ErrorCode {
     EMAIL_TAKEN(HttpStatus.CONFLICT),
     SEAT_TAKEN(HttpStatus.CONFLICT),
     TRIP_DEPARTED(HttpStatus.CONFLICT),
+    TRIP_CANCELLED(HttpStatus.CONFLICT),
+    IN_USE(HttpStatus.CONFLICT),
     BOOKING_RULE_VIOLATED(HttpStatus.CONFLICT),
     // 500
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR);

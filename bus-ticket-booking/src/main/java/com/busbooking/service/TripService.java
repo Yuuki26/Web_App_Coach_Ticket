@@ -1,6 +1,7 @@
 package com.busbooking.service;
 
 import com.busbooking.dto.PopularRouteResponse;
+import com.busbooking.dto.RouteResponse;
 import com.busbooking.dto.SeatMapResponse;
 import com.busbooking.dto.TripResponse;
 import com.busbooking.exception.NotFoundException;
@@ -33,6 +34,11 @@ public class TripService {
 
     public List<String> cities() {
         return routeRepository.findCities();
+    }
+
+    /** Every active route, for the Routes page. */
+    public List<RouteResponse> routes() {
+        return routeRepository.findByActiveTrueOrderById().stream().map(RouteResponse::from).toList();
     }
 
     public List<PopularRouteResponse> popularRoutes() {

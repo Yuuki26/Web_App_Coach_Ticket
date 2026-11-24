@@ -119,6 +119,7 @@ Until real email is added, the verification link is written to the application l
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/v1/cities` | Cities for the From / To dropdowns |
+| GET | `/api/v1/routes` | Every route: cities, stations, km, timetable duration, cheapest fare, station map positions |
 | GET | `/api/v1/routes/popular` | Popular route cards (cheapest fare, duration) |
 | GET | `/api/v1/trips/search?from=TP. Hồ Chí Minh&to=Đà Lạt&date=2026-11-20` | Scheduled trips that day that haven't departed |
 | GET | `/api/v1/trips/{id}` | One trip |
@@ -132,6 +133,10 @@ Until real email is added, the verification link is written to the application l
 | GET | `/api/v1/trips/{id}/traffic` | Traffic on the trip's route, plus an arrival estimate if it leaves within 3 hours |
 
 Search results and popular routes include the route's id (`routeId` / `id`) for the traffic calls.
+
+The frontend in `../frontend/hcoach` uses `/api/v1/routes` and the traffic endpoint on its **Routes**
+screen. Serve it with VS Code Live Server (port 5500), which the backend's CORS settings allow
+(`app.cors.allowed-origins`, or the `CORS_ORIGINS` environment variable).
 
 ### Live traffic (TomTom or Google Maps)
 

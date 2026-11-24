@@ -1,6 +1,7 @@
 package com.busbooking.controller;
 
 import com.busbooking.dto.PopularRouteResponse;
+import com.busbooking.dto.RouteResponse;
 import com.busbooking.dto.TrafficResponse;
 import com.busbooking.service.TripService;
 import com.busbooking.traffic.TrafficService;
@@ -27,6 +28,12 @@ public class RouteController {
     @GetMapping("/cities")
     public List<String> cities() {
         return tripService.cities();
+    }
+
+    /** Every route we run, with stations and map positions, for the Routes page. */
+    @GetMapping("/routes")
+    public List<RouteResponse> routes() {
+        return tripService.routes();
     }
 
     /** The "Popular routes" cards on the home page. */

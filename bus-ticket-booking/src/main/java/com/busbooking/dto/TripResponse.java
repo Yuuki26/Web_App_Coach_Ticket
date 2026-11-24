@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 
 public record TripResponse(
         Long id,
+        Long routeId,
         String origin,
         String destination,
         String originStation,
@@ -31,6 +32,7 @@ public record TripResponse(
         var coach = trip.getCoach();
         return new TripResponse(
                 trip.getId(),
+                route.getId(),
                 route.getOrigin(),
                 route.getDestination(),
                 route.getOriginStation(),

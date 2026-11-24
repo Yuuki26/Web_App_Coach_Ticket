@@ -71,6 +71,8 @@ public class RouteAdminService {
         Route route = routes.save(new Route(origin, destination, req.originStation().trim(),
                 req.destinationStation().trim(), req.distanceKm(), req.durationMinutes(), req.fromPrice(),
                 req.isPopular()));
+        route.setOriginPosition(req.originLat(), req.originLng());
+        route.setDestinationPosition(req.destinationLat(), req.destinationLng());
         audit.record(ENTITY, route.getId(), AuditAction.CREATE, origin + " → " + destination);
         return toResponse(route);
     }
@@ -98,6 +100,12 @@ public class RouteAdminService {
         route.setDurationMinutes(c.track("durationMinutes", route.getDurationMinutes(), req.durationMinutes()));
         route.setFromPrice(c.track("fromPrice", route.getFromPrice(), req.fromPrice()));
         route.setPopular(c.track("popular", route.isPopular(), req.isPopular()));
+        c.track("originPosition", position(route.getOriginLat(), route.getOriginLng()),
+                position(req.originLat(), req.originLng()));
+        route.setOriginPosition(req.originLat(), req.originLng());
+        c.track("destinationPosition", position(route.getDestinationLat(), route.getDestinationLng()),
+                position(req.destinationLat(), req.destinationLng()));
+        route.setDestinationPosition(req.destinationLat(), req.destinationLng());
         if (!c.isEmpty()) audit.record(ENTITY, id, AuditAction.UPDATE, c.toString());
         return toResponse(route);
     }
@@ -142,5 +150,9 @@ public class RouteAdminService {
 
     private RouteDtos.Response toResponse(Route r) {
         return RouteDtos.Response.from(r, upcomingTrips(r));
+    }
+
+    private static String position(Double lat, Double lng) {
+        return lat == null || lng == null ? null : lat + "," + lng;
     }
 }

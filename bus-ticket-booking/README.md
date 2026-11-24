@@ -32,9 +32,11 @@ none, and it never touches riders' bookings. A sample completed booking exists f
 `HC-48213` / `sam@example.com`.
 
 > **Upgrading from an older version?** The tables changed (coaches, promo codes, HCMC data). Drop the old
-> database once so it is rebuilt: `DROP DATABASE hcoach;` in MySQL, then start the app.
+> database once so it is rebuilt: `DROP DATABASE hcoach;` in MySQL, then start the app. (The later
+> station-position columns need no drop: they are added on start and filled in for the sample stations.)
 
-Settings come from environment variables so no secret is stored in the code (see `.env.example`):
+Settings come from environment variables, or from a `.env` file next to `pom.xml` (copy `.env.example`;
+git ignores `.env`), so no secret is stored in the code:
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -43,6 +45,9 @@ Settings come from environment variables so no secret is stored in the code (see
 | `DB_PASSWORD` | empty | MySQL password |
 | `JWT_SECRET` | random per start | Signs login tokens. 32+ characters. **Set it** anywhere but local dev, or everyone is logged out on restart |
 | `APP_PUBLIC_URL` | `http://localhost:8081` | Start of the email verification link |
+| `TOMTOM_API_KEY` | empty | Server-side TomTom key for live traffic (see [Live traffic](#live-traffic-tomtom-or-google-maps)) |
+| `GOOGLE_MAPS_API_KEY` | empty | Alternative: Google key with the Routes API (used instead of TomTom when both are set) |
+| `TRAFFIC_PROVIDER` | `auto` | `auto` (whichever key is set), `tomtom`, `google`, `simulated` or `off` |
 
 API documentation: http://localhost:8081/swagger-ui.html (click **Authorize** and paste an access token).
 
@@ -123,6 +128,43 @@ Until real email is added, the verification link is written to the application l
 | GET 🔒 | `/api/v1/bookings/mine` | Bookings made while logged in |
 | POST | `/api/v1/bookings/lookup` | Find a booking by `{bookingCode, email}` |
 | POST | `/api/v1/bookings/cancel` | Cancel a booking by `{bookingCode, email}` |
+| GET | `/api/v1/routes/{id}/traffic` | Live traffic on a route (see below) |
+| GET | `/api/v1/trips/{id}/traffic` | Traffic on the trip's route, plus an arrival estimate if it leaves within 3 hours |
+
+Search results and popular routes include the route's id (`routeId` / `id`) for the traffic calls.
+
+### Live traffic (TomTom or Google Maps)
+
+`GET /api/v1/routes/{id}/traffic` asks **TomTom's Routing API** (or Google's Routes API, if that key is
+set instead) how long the drive between the route's two stations takes right now:
+
+```json
+{"routeId":1,"origin":"TP. Hồ Chí Minh","destination":"Đà Lạt","source":"TOMTOM",
+ "scheduledMinutes":420,"typicalMinutes":395,"currentMinutes":452,"delayMinutes":57,"level":"MODERATE",
+ "distanceKm":305.4,"encodedPolyline":"...","speedIntervals":[],"checkedAt":"2026-11-23T17:05:12",
+ "stale":false,"note":null}
+```
+
+- `level`: `LIGHT` (under 10 % slower than an empty road), `MODERATE` (10–30 %), `HEAVY` (30 % or more).
+- `encodedPolyline` is the road path in Google's encoded-polyline format (whichever provider answered),
+  for drawing on a map; Leaflet, MapLibre and Google Maps all have decoders. `speedIntervals` split that
+  line into `NORMAL` / `SLOW` / `TRAFFIC_JAM` stretches (always with TomTom; with Google only when
+  `app.traffic.speed-intervals=true`).
+- Stations are sent by map position (`originLat/Lng`, `destinationLat/Lng` on the route; the sample
+  positions are approximate and can be corrected with `PUT /api/v1/manage/routes/{id}`). TomTom needs
+  them; Google can fall back to the station name.
+- **Cost control.** One answer per route is reused for 5 minutes (`app.traffic.cache-ttl`) however many
+  people ask, and at most 160 requests a day are sent (`app.traffic.daily-limit`). TomTom's free plan
+  allows about 2,500 a day, so this can be raised; Google bills each request. Past the limit, or if the
+  provider fails, the last answer is returned with `"stale": true` and a `note`; with no earlier answer
+  the call fails with `503 TRAFFIC_UNAVAILABLE`. The daily count is kept in memory and restarts with the app.
+- **Without a key** the feature is off (503), except in the h2 mode, which returns made-up rush-hour
+  numbers marked `"source":"SIMULATED"`. `TRAFFIC_PROVIDER=simulated` does the same anywhere.
+- Managers can check the setup and today's usage at `GET /api/v1/manage/traffic/status`.
+
+Getting a TomTom key: sign up at developer.tomtom.com (no credit card), copy the key from the
+dashboard, and put `TOMTOM_API_KEY=...` in `.env`. Keep it on the server only; a map in the browser needs
+its own key.
 
 ### Management (🔒 manager or admin)
 
@@ -169,7 +211,7 @@ Codes: `VALIDATION_FAILED`, `BAD_REQUEST`, `INVALID_TOKEN`, `WRONG_PASSWORD` (40
 `INVALID_CREDENTIALS`, `REFRESH_TOKEN_INVALID` (401) · `FORBIDDEN`, `EMAIL_NOT_VERIFIED`, `ACCOUNT_DISABLED` (403) ·
 `NOT_FOUND` (404) · `CONFLICT`, `EMAIL_TAKEN`, `SEAT_TAKEN`, `TRIP_DEPARTED`, `TRIP_CANCELLED`, `IN_USE`,
 `DUPLICATE`, `SCHEDULE_CONFLICT`, `BOOKING_RULE_VIOLATED` (409) ·
-`INTERNAL_ERROR` (500).
+`INTERNAL_ERROR` (500) · `TRAFFIC_UNAVAILABLE` (503).
 
 ## Rules the backend enforces
 

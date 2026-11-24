@@ -758,3 +758,25 @@ footer {
         transition: none !important;
     }
 }
+
+/* Live traffic line above search results; the left border shows how busy the road is. */
+.traffic {
+    background: #fff;
+    border: 1px solid var(--b);
+    border-left: 4px solid var(--ok);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    align-items: baseline;
+}
+
+.traffic.moderate {
+    border-left-color: var(--a);
+}
+
+.traffic.heavy {
+    border-left-color: var(--er);
+}

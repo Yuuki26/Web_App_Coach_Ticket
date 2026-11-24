@@ -36,7 +36,10 @@ public enum ErrorCode {
     SCHEDULE_CONFLICT(HttpStatus.CONFLICT),
     BOOKING_RULE_VIOLATED(HttpStatus.CONFLICT),
     // 500
-    INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR);
+    INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR),
+    // 503
+    /** Live traffic can't be had right now (not set up, Google unreachable, or daily limit used up). */
+    TRAFFIC_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE);
 
     private final HttpStatus status;
 

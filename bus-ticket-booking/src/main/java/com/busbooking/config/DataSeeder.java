@@ -31,6 +31,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -71,6 +72,28 @@ public class DataSeeder implements CommandLineRunner {
             new Line("Cà Mau", MIEN_TAY, "Bến xe Cà Mau", 300, 480, 250_000, false),
             new Line("Quy Nhơn", MIEN_DONG, "Bến xe Quy Nhơn", 650, 720, 400_000, false));
 
+    /**
+     * Approximate map positions (lat, lng) of the stations, used to ask Google Maps for live traffic.
+     * The HCMC stations are placed at the stations; the other ends are close to the city's bus station.
+     * Managers can correct them through PUT /api/v1/manage/routes/{id}.
+     */
+    private static final Map<String, double[]> STATION_POSITIONS = Map.ofEntries(
+            Map.entry(MIEN_DONG, new double[]{10.8790, 106.8155}),
+            Map.entry(MIEN_TAY, new double[]{10.7404, 106.6188}),
+            Map.entry(AN_SUONG, new double[]{10.8436, 106.6128}),
+            Map.entry("Bến xe Liên tỉnh Đà Lạt", new double[]{11.9273, 108.4446}),
+            Map.entry("Bến xe Vũng Tàu", new double[]{10.3520, 107.0857}),
+            Map.entry("Bến xe Trung tâm Cần Thơ", new double[]{9.9955, 105.7433}),
+            Map.entry("Bến xe phía Nam Nha Trang", new double[]{12.2210, 109.1500}),
+            Map.entry("Bến xe Phan Thiết", new double[]{10.9400, 108.1000}),
+            Map.entry("Bến xe Châu Đốc", new double[]{10.6905, 105.1140}),
+            Map.entry("Bến xe Rạch Giá", new double[]{10.0050, 105.0900}),
+            Map.entry("Bến xe phía Bắc Buôn Ma Thuột", new double[]{12.7000, 108.0560}),
+            Map.entry("Bến xe Tây Ninh", new double[]{11.3100, 106.1000}),
+            Map.entry("Bến xe Bến Tre", new double[]{10.2600, 106.3650}),
+            Map.entry("Bến xe Cà Mau", new double[]{9.1700, 105.1700}),
+            Map.entry("Bến xe Quy Nhơn", new double[]{13.7690, 109.2230}));
+
     /** Six departures a day; each adds a different amount (VND) to the route's cheapest fare. */
     private static final LocalTime[] DEPARTURES = {
             LocalTime.of(6, 0), LocalTime.of(8, 30), LocalTime.of(11, 0),
@@ -110,6 +133,8 @@ public class DataSeeder implements CommandLineRunner {
         if (routes.count() == 0) {
             seedBaseData();
         }
+
+        addMissingPositions();
 
         List<Route> routeList = routes.findAll(Sort.by("id")).stream().filter(Route::isActive).toList();
         List<Coach> fleet = coaches.findAll(Sort.by("id")).stream()
@@ -175,6 +200,26 @@ public class DataSeeder implements CommandLineRunner {
         Trip past = trips.save(new Trip(canTho, fleet.get(1), dep, dep.plusMinutes(canTho.getDurationMinutes()),
                 canTho.getFromPrice()));
         saveBooking("HC-48213", past, "Sam Nguyen", "sam@example.com", List.of("3A"));
+    }
+
+    /** Fills in station positions for routes created before positions existed (only where none are set). */
+    private void addMissingPositions() {
+        int updated = 0;
+        for (Route route : routes.findAll()) {
+            double[] from = STATION_POSITIONS.get(route.getOriginStation());
+            double[] to = STATION_POSITIONS.get(route.getDestinationStation());
+            boolean changed = false;
+            if (route.getOriginLat() == null && from != null) {
+                route.setOriginPosition(from[0], from[1]);
+                changed = true;
+            }
+            if (route.getDestinationLat() == null && to != null) {
+                route.setDestinationPosition(to[0], to[1]);
+                changed = true;
+            }
+            if (changed) updated++;
+        }
+        if (updated > 0) log.info("Added station map positions to {} route(s)", updated);
     }
 
     /** Each pair of routes (out and back) is run by one operator; departures rotate through its coaches. */

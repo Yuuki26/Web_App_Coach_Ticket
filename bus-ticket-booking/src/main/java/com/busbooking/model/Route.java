@@ -39,6 +39,15 @@ public class Route extends Auditable {
     @Column(nullable = false)
     private boolean popular;
 
+    /**
+     * Map position of each station (WGS84). Optional: used to ask Google Maps for live traffic. When
+     * missing, the station name and city are sent as an address instead.
+     */
+    private Double originLat;
+    private Double originLng;
+    private Double destinationLat;
+    private Double destinationLng;
+
     /** False = removed (soft delete): hidden from search, history kept. */
     @Column(nullable = false)
     private boolean active = true;
@@ -74,6 +83,25 @@ public class Route extends Auditable {
     public void setFromPrice(BigDecimal fromPrice) { this.fromPrice = fromPrice; }
     public boolean isPopular() { return popular; }
     public void setPopular(boolean popular) { this.popular = popular; }
+    public Double getOriginLat() { return originLat; }
+    public Double getOriginLng() { return originLng; }
+    public Double getDestinationLat() { return destinationLat; }
+    public Double getDestinationLng() { return destinationLng; }
+
+    public boolean hasCoordinates() {
+        return originLat != null && originLng != null && destinationLat != null && destinationLng != null;
+    }
+
+    public void setOriginPosition(Double lat, Double lng) {
+        this.originLat = lat;
+        this.originLng = lng;
+    }
+
+    public void setDestinationPosition(Double lat, Double lng) {
+        this.destinationLat = lat;
+        this.destinationLng = lng;
+    }
+
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
 }

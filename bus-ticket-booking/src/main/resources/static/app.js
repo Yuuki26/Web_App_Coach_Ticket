@@ -43,6 +43,7 @@ let S = {
     cities: [],      // from GET /cities
     popular: [],     // from GET /routes/popular
     results: [],     // from GET /trips/search
+    traffic: null,   // from GET /routes/{id}/traffic, for the route being searched
     trip: null,      // the trip being booked
     seatMap: null,   // from GET /trips/{id}/seats
     seats: [],       // selected seat labels, e.g. ['3A']
@@ -127,11 +128,31 @@ async function search() {
         const q = S.q;
         S.results = await api(`/trips/search?from=${encodeURIComponent(q.from)}&to=${encodeURIComponent(q.to)}&date=${q.date}`);
         S.seats = [];
+        S.traffic = null;
         go('search');
+        if (S.results.length) loadTraffic(S.results[0].routeId);
     } catch (e) {
         toast(e.message);
     }
 }
+
+/** Live traffic on the route; the line simply stays hidden if the server can't get it. */
+async function loadTraffic(routeId) {
+    try {
+        const t = await api(`/routes/${routeId}/traffic`);
+        if (S.scr == 'search' && S.results.length && S.results[0].routeId == routeId) {
+            S.traffic = t;
+            render();
+        }
+    } catch (e) { /* traffic is optional */ }
+}
+
+const trafficLine = t => !t ? '' : `
+    <div class="traffic ${t.level.toLowerCase()}">
+        <b>Road now: ${dur(t.currentMinutes)}</b>
+        <span class="mu">(${dur(t.typicalMinutes)} without traffic) · ${cap(t.level)} traffic${t.delayMinutes ? `, +${t.delayMinutes} min` : ''}
+        · checked ${tm(t.checkedAt)}${t.source == 'SIMULATED' ? ' · simulated data' : ''}${t.stale ? ' · may be out of date' : ''}</span>
+    </div>`;
 
 function pick(i) {
     S.q.from = S.popular[i].origin;
@@ -451,6 +472,7 @@ const V = {
                     <span style="flex:1"></span>
                     ${['All', 'Standard', 'Premium', 'Sleeper'].map(x => `<span class="chip ${S.type == x ? 'on' : ''}" onclick="S.type='${x}';render()">${x}</span>`).join('')}
                 </div>
+                ${trafficLine(S.traffic)}
                 ${L.length ? L.map(t => `
                     <div class="card trip">
                         <div class="op">

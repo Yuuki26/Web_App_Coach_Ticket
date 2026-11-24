@@ -1,4 +1,4 @@
-/* H Coach frontend. All data comes from the Spring Boot API under /api. */
+/* H Coach frontend. All data comes from the Spring Boot API under /api/v1. */
 
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 
@@ -8,7 +8,7 @@ const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAl
 async function api(path, body) {
     let res;
     try {
-        res = await fetch('/api' + path, body === undefined ? undefined : {
+        res = await fetch('/api/v1' + path, body === undefined ? undefined : {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
@@ -37,12 +37,13 @@ D.setDate(D.getDate() + 3);
 
 let S = {
     scr: 'home',
-    q: { from: 'New York', to: 'Boston', date: iso(D), pax: 1 },
+    q: { from: 'TP. Hồ Chí Minh', to: 'Đà Lạt', date: iso(D), pax: 1 },
     sort: 'Cheapest',
     type: 'All',
     cities: [],      // from GET /cities
     popular: [],     // from GET /routes/popular
     results: [],     // from GET /trips/search
+    traffic: null,   // from GET /routes/{id}/traffic, for the route being searched
     trip: null,      // the trip being booked
     seatMap: null,   // from GET /trips/{id}/seats
     seats: [],       // selected seat labels, e.g. ['3A']
@@ -57,7 +58,8 @@ let S = {
 // ---------- Helpers ----------
 
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const m = n => '$' + Number(n).toFixed(2);
+/** Money in Vietnamese đồng, e.g. 280.000 ₫ */
+const m = n => Number(n).toLocaleString('vi-VN', { maximumFractionDigits: 0 }) + ' ₫';
 const fd = d => new Date(d.slice(0, 10) + 'T00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 const tm = t => new Date(t).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 const dur = min => `${Math.floor(min / 60)}h ${String(min % 60).padStart(2, '0')}m`;
@@ -126,11 +128,31 @@ async function search() {
         const q = S.q;
         S.results = await api(`/trips/search?from=${encodeURIComponent(q.from)}&to=${encodeURIComponent(q.to)}&date=${q.date}`);
         S.seats = [];
+        S.traffic = null;
         go('search');
+        if (S.results.length) loadTraffic(S.results[0].routeId);
     } catch (e) {
         toast(e.message);
     }
 }
+
+/** Live traffic on the route; the line simply stays hidden if the server can't get it. */
+async function loadTraffic(routeId) {
+    try {
+        const t = await api(`/routes/${routeId}/traffic`);
+        if (S.scr == 'search' && S.results.length && S.results[0].routeId == routeId) {
+            S.traffic = t;
+            render();
+        }
+    } catch (e) { /* traffic is optional */ }
+}
+
+const trafficLine = t => !t ? '' : `
+    <div class="traffic ${t.level.toLowerCase()}">
+        <b>Road now: ${dur(t.currentMinutes)}</b>
+        <span class="mu">(${dur(t.typicalMinutes)} without traffic) · ${cap(t.level)} traffic${t.delayMinutes ? `, +${t.delayMinutes} min` : ''}
+        · checked ${tm(t.checkedAt)}${t.source == 'SIMULATED' ? ' · simulated data' : ''}${t.stale ? ' · may be out of date' : ''}</span>
+    </div>`;
 
 function pick(i) {
     S.q.from = S.popular[i].origin;
@@ -355,7 +377,7 @@ const V = {
                         ${i < 2 ? `<span class="rb">${i ? 'Top Deal' : 'Most Popular'}</span>` : ''}
                         <small>${dur(r.durationMinutes)} · direct</small>
                         <h3>${esc(r.origin)} to ${esc(r.destination)}</h3>
-                        <span>From <b>$${Number(r.fromPrice).toFixed(0)}</b></span>
+                        <span>From <b>${m(r.fromPrice)}</b></span>
                     </div>`).join('')}
             </div>
             <h2>Why choose H Coach</h2>
@@ -450,6 +472,7 @@ const V = {
                     <span style="flex:1"></span>
                     ${['All', 'Standard', 'Premium', 'Sleeper'].map(x => `<span class="chip ${S.type == x ? 'on' : ''}" onclick="S.type='${x}';render()">${x}</span>`).join('')}
                 </div>
+                ${trafficLine(S.traffic)}
                 ${L.length ? L.map(t => `
                     <div class="card trip">
                         <div class="op">
@@ -465,7 +488,7 @@ const V = {
                                 <div class="ln">${dur(t.durationMinutes)}</div>
                                 <b>${tm(t.arrivalTime)}</b>
                             </div>
-                            <div class="mu" style="margin-top:6px">${esc(t.origin)} Station → ${esc(t.destination)} Station · Wi-Fi · Power outlets</div>
+                            <div class="mu" style="margin-top:6px">${esc(t.originStation)} → ${esc(t.destinationStation)} · Wi-Fi · Power outlets</div>
                             <div class="${t.seatsLeft < 8 ? 'low' : 'mu'}">${t.seatsLeft} seats left</div>
                         </div>
                         <div>
@@ -505,7 +528,7 @@ const V = {
                         <span style="--c:#9ec5ea">Available</span>
                         <span style="--c:#FF7A1A">Selected</span>
                         <span style="--c:#c9d1db">Booked</span>
-                        <span style="--c:#22A06B">Extra legroom (+$${Number(sm.legroomSurcharge).toFixed(0)})</span>
+                        <span style="--c:#22A06B">Extra legroom (+${m(sm.legroomSurcharge)})</span>
                     </div>
                 </div>
                 <div class="card sum">
@@ -513,7 +536,7 @@ const V = {
                     <div class="mu">${esc(t.operatorName)} · ${fd(t.departureTime)}<br>${tm(t.departureTime)} → ${tm(t.arrivalTime)}</div>
                     <hr style="border:0;border-top:1px solid var(--b);margin:12px 0">
                     <div class="r"><span>Seats</span><b>${S.seats.join(', ') || 'None yet'}</b></div>
-                    <div class="r"><span>Pick-up</span><span>${esc(t.origin)} Station</span></div>
+                    <div class="r"><span>Pick-up</span><span>${esc(t.originStation)}</span></div>
                     <div class="r tot"><span>Total</span><span>${m(S.quote ? S.quote.total : 0)}</span></div>
                     <button class="btn" style="width:100%;margin-top:14px" ${need == 0 && S.quote ? '' : 'disabled'} onclick="go('pay')">
                         ${need == 0 ? 'Continue' : `Select ${need} more seat${need > 1 ? 's' : ''}`}

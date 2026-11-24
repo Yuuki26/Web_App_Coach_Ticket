@@ -1,8 +1,13 @@
 package com.busbooking.exception;
 
-/** Business-rule violation, e.g. seat already taken or invalid seat number. */
-public class BookingException extends RuntimeException {
+/** Business-rule violation while booking, e.g. seat already taken or invalid seat. */
+public class BookingException extends ApiException {
+
     public BookingException(String message) {
-        super(message);
+        super(ErrorCode.BOOKING_RULE_VIOLATED, message);
+    }
+
+    public BookingException(ErrorCode code, String message) {
+        super(code, message);
     }
 }

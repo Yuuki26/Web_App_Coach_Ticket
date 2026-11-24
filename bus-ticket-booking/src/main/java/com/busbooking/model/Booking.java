@@ -3,30 +3,37 @@ package com.busbooking.model;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "bookings")
-public class Booking {
+@Table(name = "bookings", indexes = {
+        @Index(columnList = "trip_id, status"),
+        @Index(columnList = "email"),
+        @Index(columnList = "created_at")})
+public class Booking extends Auditable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     /** Public reference shown on the e-ticket, e.g. HC-48213. */
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 20)
     private String bookingCode;
 
     @ManyToOne(optional = false)
     private Trip trip;
 
-    @Column(nullable = false)
+    /** The account that booked, or null for a guest booking (found again by code + email). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    private User customer;
+
+    @Column(nullable = false, length = 100)
     private String passengerName;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 150)
     private String email;
 
+    @Column(length = 30)
     private String phone;
 
     /** Seat labels such as "3A". */
@@ -35,34 +42,35 @@ public class Booking {
     @Column(name = "seat_label", nullable = false)
     private List<String> seats = new ArrayList<>();
 
-    @Column(nullable = false, precision = 10, scale = 2)
+    @Column(nullable = false, precision = 12, scale = 0)
     private BigDecimal fare;
 
-    @Column(nullable = false, precision = 10, scale = 2)
+    @Column(nullable = false, precision = 12, scale = 0)
     private BigDecimal discount;
 
-    @Column(nullable = false, precision = 10, scale = 2)
+    @Column(nullable = false, precision = 12, scale = 0)
     private BigDecimal tax;
 
-    @Column(nullable = false, precision = 10, scale = 2)
+    @Column(nullable = false, precision = 12, scale = 0)
     private BigDecimal total;
 
-    private String promoCode;
+    /** The discount code used, if any. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    private PromoCode promoCode;
 
     @Enumerated(EnumType.STRING)
+    @Column(length = 20)
     private PaymentMethod paymentMethod;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private BookingStatus status = BookingStatus.CONFIRMED;
-
-    private LocalDateTime createdAt = LocalDateTime.now();
 
     protected Booking() {}
 
     public Booking(String bookingCode, Trip trip, String passengerName, String email, String phone,
                    List<String> seats, BigDecimal fare, BigDecimal discount, BigDecimal tax, BigDecimal total,
-                   String promoCode, PaymentMethod paymentMethod) {
+                   PromoCode promoCode, PaymentMethod paymentMethod) {
         this.bookingCode = bookingCode;
         this.trip = trip;
         this.passengerName = passengerName;
@@ -80,6 +88,8 @@ public class Booking {
     public Long getId() { return id; }
     public String getBookingCode() { return bookingCode; }
     public Trip getTrip() { return trip; }
+    public User getCustomer() { return customer; }
+    public void setCustomer(User customer) { this.customer = customer; }
     public String getPassengerName() { return passengerName; }
     public String getEmail() { return email; }
     public String getPhone() { return phone; }
@@ -88,9 +98,8 @@ public class Booking {
     public BigDecimal getDiscount() { return discount; }
     public BigDecimal getTax() { return tax; }
     public BigDecimal getTotal() { return total; }
-    public String getPromoCode() { return promoCode; }
+    public PromoCode getPromoCode() { return promoCode; }
     public PaymentMethod getPaymentMethod() { return paymentMethod; }
     public BookingStatus getStatus() { return status; }
     public void setStatus(BookingStatus status) { this.status = status; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
 }

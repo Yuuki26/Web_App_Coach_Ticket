@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>H Coach Vietnam — Intercity Bus & Limousine Ticket Booking</title>
+  <meta name="description" content="Book intercity bus and VIP limousine tickets across all 63 provinces of Vietnam with H Coach. Real-time seat maps, secure payments, and instant QR e-tickets." />
+
+  <!-- Optional Google Font (gracefully falls back to system fonts offline) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- CSS: nạp theo thứ tự, file sau có thể ghi đè file trước -->
+  <link rel="stylesheet" href="css/01-base.css" />
+  <link rel="stylesheet" href="css/02-components.css" />
+  <link rel="stylesheet" href="css/03-header.css" />
+  <link rel="stylesheet" href="css/04-hero-search.css" />
+  <link rel="stylesheet" href="css/05-home-sections.css" />
+  <link rel="stylesheet" href="css/06-search-results.css" />
+  <link rel="stylesheet" href="css/07-seat-map.css" />
+  <link rel="stylesheet" href="css/08-payment-modals.css" />
+</head>
+<body>
+  <div id="app"></div>
+  <div id="toast-container" aria-live="polite"></div>
+
+  <!-- JS: script thường (không phải module), PHẢI giữ đúng thứ tự này -->
+  <script src="js/data/01-provinces-stations.js"></script>
+  <script src="js/data/02-routes-promos-reviews.js"></script>
+  <script src="js/core/03-state.js"></script>
+  <script src="js/core/04-icons-illustrations.js"></script>
+  <script src="js/core/05-toast-clipboard.js"></script>
+  <script src="js/core/06-trip-seat-generator.js"></script>
+  <script src="js/components/07-header-stepper-auth.js"></script>
+  <script src="js/components/08-city-picker.js"></script>
+  <script src="js/screens/09-home.js"></script>
+  <script src="js/screens/10-search-results.js"></script>
+  <script src="js/screens/11-seat-selection.js"></script>
+  <script src="js/screens/12-passenger-details.js"></script>
+  <script src="js/screens/13-payment.js"></script>
+  <script src="js/screens/14-confirmation.js"></script>
+  <script src="js/screens/15-my-trips.js"></script>
+  <script src="js/16-actions.js"></script>
+  <script src="js/17-main.js"></script>
+</body>
+</html>

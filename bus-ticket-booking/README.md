@@ -190,6 +190,26 @@ Every change is also written to the audit log.
 DELETE on operators, coaches, routes and promo codes is a **soft delete** (the record is kept and can be
 restored), so past bookings never lose their history.
 
+### City buses (Ho Chi Minh City)
+
+169 HCMC bus lines (315 directions, about 5,900 stops) with their road paths, stops, hours, frequency
+and fares, from **OpenStreetMap** (data © OpenStreetMap contributors, ODbL; show that credit wherever
+the data appears). Loaded on first start from `src/main/resources/citybus/hcmc-bus-osm.json`.
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/v1/city-buses?q=` | Lines in number order. `q` matches line number, name, terminals or **any stop name**, with or without accents (`ben thanh`) |
+| GET | `/api/v1/city-buses/{id}` | One line: each direction's path (`polyline`, Google encoded format), length and stops in order |
+| GET | `/api/v1/city-buses/stops/near?lat=&lng=&radius=500` | Stops near a point, nearest first, with the lines at each (radius up to 2,000 m) |
+| POST 🔒 admin | `/api/v1/admin/city-buses/import` | Re-download from OpenStreetMap's Overpass API (a minute or two; the public servers are often busy) |
+| POST 🔒 admin | `/api/v1/admin/city-buses/import-file` | Import a saved Overpass answer sent as the body (query: `CityBusImportService.OVERPASS_QUERY`) |
+| GET 🔒 admin | `/api/v1/admin/city-buses/snapshot` | Current data in the bundled-file format, to refresh `hcmc-bus-osm.json` |
+
+`openingHours` (`Mo-Su 05:00-22:00`), `headway` (`00:08-00:20` = every 8–20 minutes) and `fare`
+(`6000 VND`, also `fareVnd`) are OSM's values and can be missing for some lines. The importer fixes
+common OSM mistakes (road pieces or stops listed out of order, extra road past the terminals); about a
+dozen loop or feeder lines still draw slightly past their last stop, and line 104 has a gap in OSM.
+
 ### Admin (🔒 admin only)
 
 | Method | Path | Purpose |
@@ -216,7 +236,7 @@ Codes: `VALIDATION_FAILED`, `BAD_REQUEST`, `INVALID_TOKEN`, `WRONG_PASSWORD` (40
 `INVALID_CREDENTIALS`, `REFRESH_TOKEN_INVALID` (401) · `FORBIDDEN`, `EMAIL_NOT_VERIFIED`, `ACCOUNT_DISABLED` (403) ·
 `NOT_FOUND` (404) · `CONFLICT`, `EMAIL_TAKEN`, `SEAT_TAKEN`, `TRIP_DEPARTED`, `TRIP_CANCELLED`, `IN_USE`,
 `DUPLICATE`, `SCHEDULE_CONFLICT`, `BOOKING_RULE_VIOLATED` (409) ·
-`INTERNAL_ERROR` (500) · `TRAFFIC_UNAVAILABLE` (503).
+`INTERNAL_ERROR` (500) · `TRAFFIC_UNAVAILABLE`, `EXTERNAL_SERVICE_UNAVAILABLE` (503).
 
 ## Rules the backend enforces
 

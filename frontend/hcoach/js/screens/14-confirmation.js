@@ -13,7 +13,7 @@ function renderConfirmationScreen() {
             ${icon('check', 34)}
           </div>
           <h1 style="font-size:1.55rem;font-weight:800;">Booking confirmed!</h1>
-          <p class="text-sm text-muted mt-2">Your e-ticket has been sent to <strong>${escapeHtml(b.email)}</strong></p>
+          <p class="text-sm text-muted mt-2">Keep your booking code. With <strong>${escapeHtml(b.email)}</strong> it finds this booking in My Trips.</p>
         </div>
 
         <div class="card" style="overflow:hidden;margin-bottom:18px;">
@@ -73,7 +73,7 @@ function renderConfirmationScreen() {
         </div>
         <div class="grid-2">
           <button type="button" class="btn btn-outline" onclick="navigate('home')">Back to Home</button>
-          <button type="button" class="btn btn-primary" onclick="navigate('trips')">View My Trips ${icon('arrowRight', 15)}</button>
+          <button type="button" class="btn btn-primary" onclick="openMyTrips()">View My Trips ${icon('arrowRight', 15)}</button>
         </div>
       </div>
     </div>

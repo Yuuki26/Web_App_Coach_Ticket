@@ -6,6 +6,13 @@ function isPassengerValid() {
   return p.name.trim().length >= 2 && p.email.includes('@') && p.phone.replace(/\s+/g, '').length >= 9;
 }
 
+/** What the applied code gives: the backend's message for real trips. */
+function promoLabel() {
+  const q = state.quote;
+  if (q && q.promoApplied && q.key === quoteKey(state.appliedPromo)) return q.promoMessage;
+  return PROMO_CODES[state.appliedPromo] ? PROMO_CODES[state.appliedPromo].label : state.appliedPromo;
+}
+
 function syncPassengerBtn() {
   const ok = isPassengerValid();
   document.querySelectorAll('.js-pax-next').forEach(b => { b.disabled = !ok; });
@@ -14,7 +21,7 @@ function syncPassengerBtn() {
 function renderPassengerScreen() {
   const trip = state.selectedTrip;
   if (!trip) return '';
-  const subtotal = trip.price * state.selectedSeats.length;
+  const subtotal = seatsSubtotal(trip, state.selectedSeats);
   const valid = isPassengerValid();
 
   return `
@@ -70,7 +77,7 @@ function renderPassengerScreen() {
         <div class="flex gap-2">
           <div class="input-wrap" style="flex:1;">
             <span class="input-icon">${icon('tag', 14)}</span>
-            <input class="input input-with-icon" style="text-transform:uppercase;" type="text" ${state.appliedPromo ? 'disabled' : ''} placeholder="Enter code (FIRSTRIDE, WEEKEND15, DALAT50K)" value="${escapeHtml(state.passenger.promo)}" oninput="state.passenger.promo=this.value.toUpperCase()"/>
+            <input class="input input-with-icon" style="text-transform:uppercase;" type="text" ${state.appliedPromo ? 'disabled' : ''} placeholder="Enter promo code (e.g. FIRSTRIDE)" value="${escapeHtml(state.passenger.promo)}" oninput="state.passenger.promo=this.value.toUpperCase()"/>
           </div>
           ${state.appliedPromo ? `
             <button type="button" class="btn" style="background:var(--success-soft);color:var(--success);" onclick="removePromo()">${icon('checkCircle', 14)} Remove</button>
@@ -78,7 +85,7 @@ function renderPassengerScreen() {
             <button type="button" class="btn btn-outline" onclick="applyPromo()">Apply</button>
           `}
         </div>
-        ${state.appliedPromo ? `<div class="text-xs font-bold text-success mt-2">✓ ${PROMO_CODES[state.appliedPromo].label}</div>` : ''}
+        ${state.appliedPromo ? `<div class="text-xs font-bold text-success mt-2">✓ ${escapeHtml(promoLabel())}</div>` : ''}
       </div>
 
       <div class="flex gap-3">

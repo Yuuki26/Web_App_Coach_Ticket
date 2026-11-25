@@ -2,6 +2,11 @@
  * 13. SCREEN 5: PAYMENT
  * ========================================================================= */
 function calcTotals() {
+  // Real trips: the backend's quote, so what is shown is exactly what will be charged.
+  const q = state.quote;
+  if (state.selectedTrip && state.selectedTrip.apiId && q && q.key === quoteKey(state.appliedPromo)) {
+    return { base: Number(q.fare), discount: Number(q.discount), tax: Number(q.tax), total: Number(q.total) };
+  }
   const base = seatsSubtotal(state.selectedTrip, state.selectedSeats);
   let discount = 0;
   if (state.appliedPromo && PROMO_CODES[state.appliedPromo]) {

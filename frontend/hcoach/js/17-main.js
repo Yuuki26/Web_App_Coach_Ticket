@@ -15,6 +15,7 @@ function render() {
     case 'confirmation': content = renderConfirmationScreen(); break;
     case 'trips': content = renderMyTripsScreen(); break;
     case 'routes': content = renderRoutesScreen(); break;
+    case 'citybus': content = renderCityBusScreen(); break;
     default: content = renderHomeScreen();
   }
 
@@ -27,6 +28,8 @@ function render() {
   // The Routes map is drawn by Leaflet after its container is on the page.
   if (state.screen === 'routes') mountRouteMap();
   else if (routeMap) { routeMap.remove(); routeMap = null; }
+  if (state.screen === 'citybus') mountCityBusMap();
+  else if (cityBusMap) { cityBusMap.remove(); cityBusMap = null; }
 }
 
 document.addEventListener('click', (e) => {

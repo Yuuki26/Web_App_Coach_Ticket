@@ -36,7 +36,14 @@
 }
 
 @media (min-width: 900px) {
-  .routes-detail-col { position: sticky; top: 140px; }
+  /* Stays in view while the list scrolls; scrolls on its own when taller than the window. */
+  .routes-detail-col {
+    position: sticky;
+    top: 140px;
+    max-height: calc(100vh - 156px);
+    overflow-y: auto;
+    border-radius: var(--radius-lg);
+  }
 }
 
 .routes-empty {

@@ -48,7 +48,8 @@ public class SecurityConfig {
                         .requestMatchers(API_DOCS).permitAll()
                         .requestMatchers("/h2-console/**").permitAll() // only enabled in the "h2" profile
                         .requestMatchers("/api/v1/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/cities", "/api/v1/routes/**", "/api/v1/trips/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/cities", "/api/v1/routes/**", "/api/v1/trips/**",
+                                "/api/v1/city-buses/**").permitAll()
                         // Guest checkout: booking and managing a booking by code + email stays open.
                         .requestMatchers(HttpMethod.POST, "/api/v1/bookings", "/api/v1/bookings/quote",
                                 "/api/v1/bookings/lookup", "/api/v1/bookings/cancel").permitAll()

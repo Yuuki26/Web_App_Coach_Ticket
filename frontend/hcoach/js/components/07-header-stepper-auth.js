@@ -14,12 +14,13 @@ function renderHeader() {
         <nav class="nav-links">
           <button type="button" class="nav-link" onclick="executeSearch()">${icon('bus', 16)} Book Tickets</button>
           <button type="button" class="nav-link" onclick="openRoutes()">${icon('mapPin', 16)} Routes</button>
+          <button type="button" class="nav-link" onclick="openCityBuses()">${icon('bus', 16)} City Bus</button>
           <button type="button" class="nav-link" onclick="scrollToEl('deals-section')">${icon('tag', 16)} Deals</button>
           <button type="button" class="nav-link" onclick="scrollToEl('footer-section')">${icon('headphones', 16)} Help</button>
         </nav>
 
         <div class="nav-actions">
-          <button type="button" class="nav-link" onclick="navigate('trips')">
+          <button type="button" class="nav-link" onclick="openMyTrips()">
             ${icon('ticket', 16)} My Trips
           </button>
           ${state.authUser ? `
@@ -42,9 +43,10 @@ function renderHeader() {
         <div class="mobile-drawer">
           <button type="button" class="mobile-drawer-link" onclick="state.mobileMenuOpen=false; executeSearch();">${icon('bus', 16)} Book Tickets</button>
           <button type="button" class="mobile-drawer-link" onclick="state.mobileMenuOpen=false; openRoutes();">${icon('mapPin', 16)} Routes</button>
+          <button type="button" class="mobile-drawer-link" onclick="state.mobileMenuOpen=false; openCityBuses();">${icon('bus', 16)} City Bus</button>
           <button type="button" class="mobile-drawer-link" onclick="state.mobileMenuOpen=false; scrollToEl('deals-section');">${icon('tag', 16)} Deals</button>
           <button type="button" class="mobile-drawer-link" onclick="state.mobileMenuOpen=false; scrollToEl('footer-section');">${icon('headphones', 16)} Help</button>
-          <button type="button" class="mobile-drawer-link" onclick="state.mobileMenuOpen=false; navigate('trips');">${icon('ticket', 16)} My Trips</button>
+          <button type="button" class="mobile-drawer-link" onclick="state.mobileMenuOpen=false; openMyTrips();">${icon('ticket', 16)} My Trips</button>
           <div class="mt-2">
             ${state.authUser ? `
               <button type="button" class="btn btn-outline btn-full" onclick="state.mobileMenuOpen=false; logoutUser();">${icon('user', 16)} Log out (${escapeHtml(state.authUser.name)})</button>

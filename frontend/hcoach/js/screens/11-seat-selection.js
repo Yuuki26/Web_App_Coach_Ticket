@@ -109,7 +109,7 @@ function renderSeatScreen() {
             <span style="font-size:1.4rem;font-weight:800;color:var(--orange);">${state.selectedSeats.length ? formatVND(total) : '—'}</span>
           </div>
 
-          <button type="button" class="btn btn-primary btn-lg btn-full" ${state.selectedSeats.length !== pax ? 'disabled' : ''} onclick="navigate('passenger')">
+          <button type="button" class="btn btn-primary btn-lg btn-full" ${state.selectedSeats.length !== pax ? 'disabled' : ''} onclick="goToPassenger()">
             Continue ${icon('arrowRight', 16)}
           </button>
         </div>
@@ -121,7 +121,7 @@ function renderSeatScreen() {
         <div class="text-xs text-muted">${state.selectedSeats.length}/${pax} seat${pax > 1 ? 's' : ''}</div>
         <div class="font-extrabold text-orange" style="font-size:1.1rem;">${state.selectedSeats.length ? formatVND(total) : '—'}</div>
       </div>
-      <button type="button" class="btn btn-primary" style="flex:1;" ${state.selectedSeats.length !== pax ? 'disabled' : ''} onclick="navigate('passenger')">
+      <button type="button" class="btn btn-primary" style="flex:1;" ${state.selectedSeats.length !== pax ? 'disabled' : ''} onclick="goToPassenger()">
         Continue ${icon('arrowRight', 15)}
       </button>
     </div>

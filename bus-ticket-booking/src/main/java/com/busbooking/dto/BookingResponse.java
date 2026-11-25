@@ -1,6 +1,7 @@
 package com.busbooking.dto;
 
 import com.busbooking.model.Booking;
+import com.busbooking.model.CoachType;
 import com.busbooking.model.BookingStatus;
 import com.busbooking.model.Trip;
 
@@ -22,7 +23,11 @@ public record BookingResponse(
         String destination,
         String operatorName,
         LocalDateTime departureTime,
-        LocalDateTime arrivalTime
+        LocalDateTime arrivalTime,
+        Long tripId,
+        String originStation,
+        String destinationStation,
+        CoachType coachType
 ) {
     public static BookingResponse from(Booking b) {
         Trip t = b.getTrip();
@@ -40,7 +45,11 @@ public record BookingResponse(
                 t.getRoute().getDestination(),
                 t.getOperator().getName(),
                 t.getDepartureTime(),
-                t.getArrivalTime()
+                t.getArrivalTime(),
+                t.getId(),
+                t.getRoute().getOriginStation(),
+                t.getRoute().getDestinationStation(),
+                t.getCoach().getType()
         );
     }
 

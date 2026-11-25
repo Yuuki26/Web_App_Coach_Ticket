@@ -56,4 +56,23 @@ js/
   qua bảng `CITY_TO_PROVINCE`. Tỉnh/tuyến không có xe sẽ hiện "We don't run this route yet".
 - Chọn chuyến → `GET /api/v1/trips/{id}/seats`: số hàng ghế thật, ghế đã bán, hàng 1–2 có chỗ để chân
   rộng (+30.000₫, đã cộng vào tạm tính và trang thanh toán).
-- Chưa nối: đặt vé/thanh toán, mã giảm giá, đăng nhập, My Trips (vẫn giả lập).
+
+## Đặt vé, mã giảm giá, My Trips – dữ liệu thật
+- Giá: `POST /api/v1/bookings/quote` (giá vé + chỗ để chân rộng − mã giảm giá + 8% VAT). Trang thanh toán
+  hiển thị đúng số tiền backend sẽ ghi nhận.
+- Mã giảm giá kiểm tra ở backend (FIRSTRIDE 10%, WEEKEND 15% cho vé từ 300.000₫...). Các mã quảng cáo
+  ở trang chủ (WEEKEND15, DALAT50K) **chưa có** trong backend.
+- Thanh toán: `POST /api/v1/bookings`. Không gửi thông tin thẻ; vé được xác nhận mà chưa trừ tiền thật.
+  Nếu ghế vừa bị người khác đặt (SEAT_TAKEN) → quay lại sơ đồ ghế mới.
+- My Trips: mã vé + email được lưu trong trình duyệt (localStorage) và tải lại bằng
+  `POST /api/v1/bookings/lookup`; hủy vé bằng `POST /api/v1/bookings/cancel`; ô "Find a booking" tìm vé khác.
+- Chưa nối: đăng nhập (vẫn giả lập; khi nối, dùng `GET /api/v1/bookings/mine` cho My Trips).
+
+## Xe buýt nội thành (City Bus) – dữ liệu OpenStreetMap
+- Menu **City Bus**: 169 tuyến xe buýt TP.HCM; tìm theo số tuyến, tên đường hoặc tên trạm (gõ không dấu
+  cũng được, ví dụ "ben thanh"). Chọn tuyến để xem bản đồ lộ trình, chiều đi/về, giờ chạy, tần suất,
+  giá vé và danh sách trạm (bấm vào trạm để xem trên bản đồ).
+- API: `GET /api/v1/city-buses?q=`, `GET /api/v1/city-buses/{id}`,
+  `GET /api/v1/city-buses/stops/near?lat=&lng=` (code trong `js/screens/15c-city-buses.js`).
+- Màn hình Routes hiện các tuyến xe buýt dừng gần bến xe ở TP.HCM (trong 400 m); bấm số tuyến để mở.
+- Dữ liệu © OpenStreetMap contributors (ODbL) – luôn giữ dòng ghi nguồn này khi hiển thị.

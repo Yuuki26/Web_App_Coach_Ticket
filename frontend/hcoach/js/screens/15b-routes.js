@@ -65,7 +65,7 @@ async function openRoutes() {
     state.routes.selectedId = (state.routes.list.find(x => x.popular) || state.routes.list[0]).id;
     render();
   }
-  if (state.routes.selectedId) loadTraffic(state.routes.selectedId);
+  if (state.routes.selectedId) loadRouteExtras(state.routes.selectedId);
 }
 
 async function loadRoutes() {
@@ -84,7 +84,7 @@ async function loadRoutes() {
   state.routes.loading = false;
   if (state.screen !== 'routes') return;
   render();
-  if (state.routes.selectedId) loadTraffic(state.routes.selectedId);
+  if (state.routes.selectedId) loadRouteExtras(state.routes.selectedId);
 }
 
 function selectRoute(id) {
@@ -94,7 +94,13 @@ function selectRoute(id) {
     const el = document.getElementById('route-detail');
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
+  loadRouteExtras(id);
+}
+
+/** What the detail panel loads for a route: live traffic and the city buses at its HCMC station. */
+function loadRouteExtras(id) {
   loadTraffic(id);
+  loadStationBuses(id);
 }
 
 async function loadTraffic(id, force) {
@@ -245,6 +251,7 @@ function renderRouteDetail(x) {
       </div>
 
       ${renderTrafficPanel(x)}
+      ${renderStationBuses(x)}
 
       <div class="route-facts">
         <div><div class="text-sm text-muted">Distance</div><div class="font-bold">${x.distanceKm} km</div></div>
@@ -337,5 +344,66 @@ function mountRouteMap() {
     .bindTooltip(x.originStation).addTo(routeMap);
   L.circleMarker(to, { radius: 8, color: '#fff', weight: 3, fillColor: '#FF7A1A', fillOpacity: 1 })
     .bindTooltip(x.destinationStation).addTo(routeMap);
-  routeMap.fitBounds(bounds, { padding: [24, 24] });
+  fitMapWhenSized(routeMap, el, bounds, 24);
+}
+
+/**
+ * Fits a Leaflet map to bounds. If its box has no size yet (page not laid out, e.g. a background
+ * tab), waits until it has one; otherwise Leaflet would zoom all the way in.
+ */
+function fitMapWhenSized(map, el, bounds, padding) {
+  // A first view makes Leaflet "loaded"; until then it ignores invalidateSize().
+  map.setView(bounds.getCenter(), 12, { animate: false });
+  const tryFit = () => {
+    if (!(el.clientWidth > 0 && el.clientHeight > 0)) return false;
+    map.invalidateSize(false);
+    if (map.getSize().x === 0) return false;
+    map.fitBounds(bounds, { padding: [padding, padding], animate: false });
+    return true;
+  };
+  if (tryFit()) return;
+  const ro = new ResizeObserver(() => {
+    if (!el.isConnected || tryFit()) ro.disconnect();
+  });
+  ro.observe(el);
+}
+
+// ---------- City buses at the HCMC station (see 15c-city-buses.js) ----------
+
+/** The HCMC end of a route: where riders change to a city bus. */
+function hcmcStation(x) {
+  if (x.origin === HCMC_NAME) return { name: x.originStation, lat: x.originLat, lng: x.originLng };
+  if (x.destination === HCMC_NAME) return { name: x.destinationStation, lat: x.destinationLat, lng: x.destinationLng };
+  return null;
+}
+
+async function loadStationBuses(routeId) {
+  const r = state.routes;
+  const x = (r.list || []).find(y => y.id === routeId);
+  const st = x && hcmcStation(x);
+  if (!st || st.lat == null || r.stationBuses[st.name]) return;
+  r.stationBuses[st.name] = { loading: true };
+  try {
+    const stops = await apiGet(`/city-buses/stops/near?lat=${st.lat}&lng=${st.lng}&radius=400`);
+    const lines = new Map();
+    stops.forEach(s => s.lines.forEach(l => { if (!lines.has(l.id)) lines.set(l.id, l); }));
+    r.stationBuses[st.name] = { lines: [...lines.values()] };
+  } catch (e) {
+    r.stationBuses[st.name] = { error: true };
+  }
+  refreshRouteDetail(routeId);
+}
+
+function renderStationBuses(x) {
+  const st = hcmcStation(x);
+  const info = st && state.routes.stationBuses[st.name];
+  if (!info || info.loading || info.error || !info.lines.length) return '';
+  const sorted = [...info.lines].sort((a, b) => (parseInt(a.ref, 10) || 9999) - (parseInt(b.ref, 10) || 9999) || a.ref.localeCompare(b.ref));
+  return `
+    <div class="station-buses">
+      <div class="text-sm"><strong>City buses at ${escapeHtml(st.name)}</strong> <span class="text-muted">· within 400 m</span></div>
+      <div class="station-buses-row">
+        ${sorted.map(l => `<button type="button" onclick="openCityBuses(${l.id})" title="Bus line ${escapeHtml(l.ref)}">${lineBadge(l.ref, l.colour, 'small')}</button>`).join('')}
+      </div>
+    </div>`;
 }

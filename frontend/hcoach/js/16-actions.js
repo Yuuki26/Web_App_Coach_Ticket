@@ -208,14 +208,65 @@ function toggleSeat(code) {
   render();
 }
 
-function applyPromo() {
+/** Seat screen → passenger details, fetching the real price first. */
+function goToPassenger() {
+  navigate('passenger');
+  refreshQuote();
+}
+
+/** Identifies what a quote was for, so an old quote is never shown for new seats. */
+function quoteKey(promo) {
+  const t = state.selectedTrip;
+  return t ? `${t.apiId}|${[...state.selectedSeats].sort().join(',')}|${promo || ''}` : '';
+}
+
+/** The backend's price for the chosen seats and promo: POST /api/v1/bookings/quote */
+async function fetchQuote(promo) {
+  const t = state.selectedTrip;
+  return apiPost('/bookings/quote', { tripId: t.apiId, seats: state.selectedSeats, promoCode: promo || null });
+}
+
+async function refreshQuote() {
+  const t = state.selectedTrip;
+  if (!t || !t.apiId || !state.selectedSeats.length) return;
+  const key = quoteKey(state.appliedPromo);
+  try {
+    const q = await fetchQuote(state.appliedPromo);
+    if (key !== quoteKey(state.appliedPromo)) return; // seats or code changed meanwhile
+    state.quote = { ...q, key };
+  } catch (e) {
+    state.quote = null; // the screens fall back to their own estimate
+  }
+  if (state.screen === 'passenger' || state.screen === 'payment') render();
+}
+
+async function applyPromo() {
   const code = (state.passenger.promo || '').trim().toUpperCase();
-  if (PROMO_CODES[code]) {
-    state.appliedPromo = code;
-    showToast(`Promo ${code} applied — ${PROMO_CODES[code].label}!`, 'success');
-    render();
-  } else {
-    showToast('Invalid promo code. Try FIRSTRIDE, WEEKEND15, or DALAT50K.', 'error');
+  if (!code) return;
+  const t = state.selectedTrip;
+  if (!t || !t.apiId) {
+    // Made-up trips (not from the backend) keep the original local codes.
+    if (PROMO_CODES[code]) {
+      state.appliedPromo = code;
+      showToast(`Promo ${code} applied — ${PROMO_CODES[code].label}!`, 'success');
+      render();
+    } else {
+      showToast('Invalid promo code.', 'error');
+    }
+    return;
+  }
+  try {
+    const q = await fetchQuote(code);
+    if (q.promoApplied) {
+      state.appliedPromo = code;
+      state.quote = { ...q, key: quoteKey(code) };
+      showToast(`Promo ${code} applied: ${q.promoMessage}`, 'success');
+      render();
+    } else {
+      showToast(q.promoMessage || 'This code can\'t be used.', 'error');
+    }
+  } catch (e) {
+    showToast(e.message, 'error');
   }
 }
 
@@ -224,13 +275,68 @@ function removePromo() {
   state.passenger.promo = '';
   showToast('Promo code removed.', 'info');
   render();
+  refreshQuote();
 }
 
-function processPayment() {
+/**
+ * Books the seats: POST /api/v1/bookings. No card details are sent; the
+ * backend confirms the booking without charging (no real payment yet).
+ */
+async function processPayment() {
   if (!state.agreedTerms) {
     showToast('Please agree to the Terms of Service.', 'error');
     return;
   }
+  const t = state.selectedTrip;
+  if (!t) return navigate('home');
+  if (!t.apiId) return processDemoPayment();
+
+  state.isProcessingPayment = true;
+  render();
+  const phone = state.passenger.phone.trim();
+  try {
+    const b = await apiPost('/bookings', {
+      tripId: t.apiId,
+      passengerName: state.passenger.name.trim(),
+      email: state.passenger.email.trim(),
+      phone: phone.replace(/[\s+]/g, '').length > 2 ? phone : null,
+      seats: state.selectedSeats,
+      promoCode: state.appliedPromo,
+      paymentMethod: PAYMENT_METHOD_API[state.paymentMethod] || 'CARD'
+    });
+    const booking = toUiBooking(b);
+    bookingRefs.add(b.bookingCode, b.email);
+    state.lastBooking = booking;
+    state.myTrips = [booking, ...state.myTrips.filter(x => x.id !== booking.id)];
+    state.isProcessingPayment = false;
+    state.agreedTerms = false;
+    state.tripsTab = 'upcoming';
+    state.appliedPromo = null;
+    state.passenger.promo = '';
+    state.quote = null;
+    showToast(`Booking confirmed! Your code is ${b.bookingCode}`, 'success');
+    navigate('confirmation');
+  } catch (e) {
+    state.isProcessingPayment = false;
+    if (e.code === 'SEAT_TAKEN') {
+      // Someone else just booked one of these seats: show the fresh seat plan.
+      showToast(e.message, 'error');
+      state.selectedSeats = [];
+      state.quote = null;
+      navigate('seats');
+      loadSeatMap(t.apiId);
+    } else if (e.code === 'TRIP_DEPARTED' || e.code === 'TRIP_CANCELLED') {
+      showToast(e.message, 'error');
+      executeSearch();
+    } else {
+      showToast(e.message, 'error');
+      render();
+    }
+  }
+}
+
+/** The original made-up payment, still used for trips that didn't come from the backend. */
+function processDemoPayment() {
   state.isProcessingPayment = true;
   render();
 
@@ -268,10 +374,61 @@ function processPayment() {
   }, 1200);
 }
 
-function confirmCancelTrip() {
+/** Cancels a booking: POST /api/v1/bookings/cancel with its code and email. */
+async function confirmCancelTrip() {
   const id = state.cancelModalTripId;
-  state.myTrips = state.myTrips.map(t => t.id === id ? { ...t, status: 'cancelled' } : t);
+  const trip = state.myTrips.find(t => t.id === id);
   state.cancelModalTripId = null;
-  showToast(`Booking ${id} cancelled. Refund in 3–5 business days.`, 'success');
+  if (!trip) return render();
+  if (!trip.real) {
+    state.myTrips = state.myTrips.map(t => t.id === id ? { ...t, status: 'cancelled' } : t);
+    showToast(`Booking ${id} cancelled.`, 'success');
+    return render();
+  }
+  try {
+    const b = await apiPost('/bookings/cancel', { bookingCode: trip.id, email: trip.email });
+    state.myTrips = state.myTrips.map(t => t.id === id ? toUiBooking(b) : t);
+    showToast(`Booking ${id} cancelled. Your seats are released.`, 'success');
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
   render();
+}
+
+/** My Trips: reloads every booking saved in this browser (POST /api/v1/bookings/lookup). */
+async function openMyTrips() {
+  navigate('trips');
+  const refs = bookingRefs.all();
+  if (!refs.length) return;
+  state.myTripsLoading = true;
+  render();
+  const results = await Promise.all(refs.map(r =>
+    apiPost('/bookings/lookup', { bookingCode: r.code, email: r.email })
+      .then(toUiBooking)
+      .catch(e => {
+        if (e.status === 404) bookingRefs.remove(r.code); // no longer exists
+        return null;
+      })));
+  state.myTrips = results.filter(Boolean);
+  state.myTripsLoading = false;
+  if (state.screen === 'trips') render();
+}
+
+/** "Find a booking" on My Trips: by booking code + email. */
+async function findBooking(e) {
+  e.preventDefault();
+  const code = state.findForm.code.trim().toUpperCase();
+  const email = state.findForm.email.trim();
+  if (!code || !email) return showToast('Enter your booking code and email.', 'error');
+  try {
+    const booking = toUiBooking(await apiPost('/bookings/lookup', { bookingCode: code, email }));
+    bookingRefs.add(booking.id, booking.email);
+    state.myTrips = [booking, ...state.myTrips.filter(t => t.id !== booking.id)];
+    state.tripsTab = booking.status;
+    state.findForm = { code: '', email: '' };
+    showToast(`Found booking ${booking.id}`, 'success');
+    render();
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
 }

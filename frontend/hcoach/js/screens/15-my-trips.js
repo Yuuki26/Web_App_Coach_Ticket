@@ -31,12 +31,28 @@ function renderMyTripsScreen() {
         `).join('')}
       </div>
 
-      ${items.length === 0 ? `
+      <form class="card p-5 find-booking" onsubmit="findBooking(event)">
+        <div class="font-bold text-sm mb-3">Find a booking</div>
+        <div class="flex gap-2" style="flex-wrap:wrap;">
+          <input class="input" style="flex:1;min-width:140px;text-transform:uppercase;" type="text" required placeholder="Booking code, e.g. HC-48213" aria-label="Booking code"
+                 value="${escapeHtml(state.findForm.code)}" oninput="state.findForm.code=this.value"/>
+          <input class="input" style="flex:1.4;min-width:180px;" type="email" required placeholder="Email used to book" aria-label="Email used to book"
+                 value="${escapeHtml(state.findForm.email)}" oninput="state.findForm.email=this.value"/>
+          <button type="submit" class="btn btn-navy">${icon('search', 14)} Find</button>
+        </div>
+      </form>
+
+      ${state.myTripsLoading ? `
+        <div class="card" style="text-align:center;padding:52px 20px;">
+          <div class="text-muted mb-3">${icon('clock', 38)}</div>
+          <h3 class="font-bold">Loading your bookings…</h3>
+        </div>
+      ` : items.length === 0 ? `
         <div class="card" style="text-align:center;padding:52px 20px;">
           <div class="text-muted mb-3">${icon('ticket', 38)}</div>
           <h3 class="font-bold mb-2">No ${state.tripsTab} trips</h3>
-          <p class="text-sm text-muted mb-4">Ready to explore Vietnam on your next intercity journey?</p>
-          <button type="button" class="btn btn-primary" onclick="navigate('home')">Browse routes</button>
+          <p class="text-sm text-muted mb-4">Bookings made in this browser show up here. To see another one, find it above with its code and email.</p>
+          <button type="button" class="btn btn-primary" onclick="openRoutes()">Browse routes</button>
         </div>
       ` : items.map(t => `
         <div class="card p-5">
@@ -95,7 +111,7 @@ function renderMyTripsScreen() {
       <div class="modal-backdrop" onclick="state.cancelModalTripId=null; render();">
         <div class="modal-box" onclick="event.stopPropagation()">
           <h3 class="font-extrabold mb-2" style="font-size:1.1rem;">Cancel booking?</h3>
-          <p class="text-sm text-muted mb-4">You'll receive a full refund since your trip is more than 24h away. This action cannot be undone.</p>
+          <p class="text-sm text-muted mb-4">Your seats will be released for other passengers. This can't be undone.</p>
           <div class="flex gap-3">
             <button type="button" class="btn btn-outline" style="flex:1;" onclick="state.cancelModalTripId=null; render();">Keep booking</button>
             <button type="button" class="btn btn-danger" style="flex:1;" onclick="confirmCancelTrip()">Yes, cancel</button>

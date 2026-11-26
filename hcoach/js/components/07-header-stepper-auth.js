@@ -1,27 +1,27 @@
 /* =========================================================================
- * 7. HEADER, STEPPER & AUTH MODAL
+ * 7. HEADER, STEPPER & AUTH MODAL (MULTI-PAGE LINKS)
  * ========================================================================= */
 function renderHeader() {
   const isHome = state.screen === 'home';
   return `
     <header class="header ${isHome ? 'header-navy' : 'header-white'}">
       <div class="container header-inner">
-        <button type="button" class="brand-btn" onclick="navigate('home')">
+        <a href="index.html" class="brand-btn" onclick="saveState()">
           <span class="brand-badge">H</span>
           <span class="brand-text">Coach</span>
-        </button>
+        </a>
 
         <nav class="nav-links">
-          <button type="button" class="nav-link" onclick="executeSearch()">${icon('bus', 16)} Book Tickets</button>
-          <button type="button" class="nav-link" onclick="scrollToEl('popular-routes')">${icon('mapPin', 16)} Routes</button>
-          <button type="button" class="nav-link" onclick="scrollToEl('deals-section')">${icon('tag', 16)} Deals</button>
-          <button type="button" class="nav-link" onclick="scrollToEl('footer-section')">${icon('headphones', 16)} Help</button>
+          <a href="search.html" class="nav-link" onclick="executeSearch(event)">${icon('bus', 16)} Book Tickets</a>
+          <a href="index.html#popular-routes" class="nav-link" onclick="scrollToEl('popular-routes', event)">${icon('mapPin', 16)} Routes</a>
+          <a href="index.html#deals-section" class="nav-link" onclick="scrollToEl('deals-section', event)">${icon('tag', 16)} Deals</a>
+          <a href="index.html#footer-section" class="nav-link" onclick="scrollToEl('footer-section', event)">${icon('headphones', 16)} Help</a>
         </nav>
 
         <div class="nav-actions">
-          <button type="button" class="nav-link" onclick="navigate('trips')">
+          <a href="trips.html" class="nav-link" onclick="saveState()">
             ${icon('ticket', 16)} My Trips
-          </button>
+          </a>
           ${state.authUser ? `
             <button type="button" class="btn btn-sm ${isHome ? 'btn-primary' : 'btn-outline'}" onclick="logoutUser()" title="Click to log out">
               ${icon('user', 16)} ${escapeHtml(state.authUser.name)}
@@ -40,11 +40,11 @@ function renderHeader() {
 
       ${state.mobileMenuOpen ? `
         <div class="mobile-drawer">
-          <button type="button" class="mobile-drawer-link" onclick="state.mobileMenuOpen=false; executeSearch();">${icon('bus', 16)} Book Tickets</button>
-          <button type="button" class="mobile-drawer-link" onclick="state.mobileMenuOpen=false; scrollToEl('popular-routes');">${icon('mapPin', 16)} Routes</button>
-          <button type="button" class="mobile-drawer-link" onclick="state.mobileMenuOpen=false; scrollToEl('deals-section');">${icon('tag', 16)} Deals</button>
-          <button type="button" class="mobile-drawer-link" onclick="state.mobileMenuOpen=false; scrollToEl('footer-section');">${icon('headphones', 16)} Help</button>
-          <button type="button" class="mobile-drawer-link" onclick="state.mobileMenuOpen=false; navigate('trips');">${icon('ticket', 16)} My Trips</button>
+          <a href="search.html" class="mobile-drawer-link" onclick="state.mobileMenuOpen=false; executeSearch(event);">${icon('bus', 16)} Book Tickets</a>
+          <a href="index.html#popular-routes" class="mobile-drawer-link" onclick="state.mobileMenuOpen=false; scrollToEl('popular-routes', event);">${icon('mapPin', 16)} Routes</a>
+          <a href="index.html#deals-section" class="mobile-drawer-link" onclick="state.mobileMenuOpen=false; scrollToEl('deals-section', event);">${icon('tag', 16)} Deals</a>
+          <a href="index.html#footer-section" class="mobile-drawer-link" onclick="state.mobileMenuOpen=false; scrollToEl('footer-section', event);">${icon('headphones', 16)} Help</a>
+          <a href="trips.html" class="mobile-drawer-link" onclick="state.mobileMenuOpen=false; saveState();">${icon('ticket', 16)} My Trips</a>
           <div class="mt-2">
             ${state.authUser ? `
               <button type="button" class="btn btn-outline btn-full" onclick="state.mobileMenuOpen=false; logoutUser();">${icon('user', 16)} Log out (${escapeHtml(state.authUser.name)})</button>

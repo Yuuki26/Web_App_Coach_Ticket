@@ -179,6 +179,7 @@ function renderTripListHtml(list) {
 function onPriceSliderInput(el) {
   const val = Number(el.value);
   state.filterMaxPrice = val;
+  saveState();
   const pct = getPricePercent(val);
   const formatted = formatVND(val);
   const hasActiveFilter = state.filterBusTypes.length > 0 || state.filterAmenities.length > 0 || val < 800000;

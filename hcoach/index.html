@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
-  <!-- CSS: nạp theo thứ tự, file sau có thể ghi đè file trước -->
+  <!-- CSS: nạp theo thứ tự -->
   <link rel="stylesheet" href="css/01-base.css" />
   <link rel="stylesheet" href="css/02-components.css" />
   <link rel="stylesheet" href="css/03-header.css" />
@@ -21,11 +21,11 @@
   <link rel="stylesheet" href="css/07-seat-map.css" />
   <link rel="stylesheet" href="css/08-payment-modals.css" />
 </head>
-<body>
+<body data-page="home">
   <div id="app"></div>
   <div id="toast-container" aria-live="polite"></div>
 
-  <!-- JS: script thường (không phải module), PHẢI giữ đúng thứ tự này -->
+  <!-- JS chung -->
   <script src="js/data/01-provinces-stations.js"></script>
   <script src="js/data/02-routes-promos-reviews.js"></script>
   <script src="js/core/03-state.js"></script>
@@ -33,14 +33,12 @@
   <script src="js/core/05-toast-clipboard.js"></script>
   <script src="js/core/06-trip-seat-generator.js"></script>
   <script src="js/components/07-header-stepper-auth.js"></script>
+
+  <!-- JS riêng của trang này -->
   <script src="js/components/08-city-picker.js"></script>
   <script src="js/screens/09-home.js"></script>
-  <script src="js/screens/10-search-results.js"></script>
-  <script src="js/screens/11-seat-selection.js"></script>
-  <script src="js/screens/12-passenger-details.js"></script>
-  <script src="js/screens/13-payment.js"></script>
-  <script src="js/screens/14-confirmation.js"></script>
-  <script src="js/screens/15-my-trips.js"></script>
+
+  <!-- Actions & khởi động trang -->
   <script src="js/16-actions.js"></script>
   <script src="js/17-main.js"></script>
 </body>

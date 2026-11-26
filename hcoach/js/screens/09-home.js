@@ -66,14 +66,14 @@ function renderHomeScreen() {
               <label class="field-label-muted">Departure</label>
               <div class="date-input-box">
                 <span class="text-navy">${icon('calendar', 14)}</span>
-                <input type="date" value="${state.query.date}" onchange="state.query.date=this.value"/>
+                <input type="date" value="${state.query.date}" onchange="state.query.date=this.value; saveState();"/>
               </div>
             </div>
             <div>
               <label class="field-label-muted">Return (optional)</label>
               <div class="date-input-box">
                 <span class="text-muted">${icon('calendar', 14)}</span>
-                <input type="date" value="${state.query.returnDate}" onchange="state.query.returnDate=this.value" style="color:var(--muted);"/>
+                <input type="date" value="${state.query.returnDate}" onchange="state.query.returnDate=this.value; saveState();" style="color:var(--muted);"/>
               </div>
             </div>
             <div class="pax-col">

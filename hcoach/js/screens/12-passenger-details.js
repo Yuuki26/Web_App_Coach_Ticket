@@ -7,6 +7,7 @@ function isPassengerValid() {
 }
 
 function syncPassengerBtn() {
+  saveState();
   const ok = isPassengerValid();
   document.querySelectorAll('.js-pax-next').forEach(b => { b.disabled = !ok; });
 }
@@ -70,7 +71,7 @@ function renderPassengerScreen() {
         <div class="flex gap-2">
           <div class="input-wrap" style="flex:1;">
             <span class="input-icon">${icon('tag', 14)}</span>
-            <input class="input input-with-icon" style="text-transform:uppercase;" type="text" ${state.appliedPromo ? 'disabled' : ''} placeholder="Enter code (FIRSTRIDE, WEEKEND15, DALAT50K)" value="${escapeHtml(state.passenger.promo)}" oninput="state.passenger.promo=this.value.toUpperCase()"/>
+            <input class="input input-with-icon" style="text-transform:uppercase;" type="text" ${state.appliedPromo ? 'disabled' : ''} placeholder="Enter code (FIRSTRIDE, WEEKEND15, DALAT50K)" value="${escapeHtml(state.passenger.promo)}" oninput="state.passenger.promo=this.value.toUpperCase(); saveState();"/>
           </div>
           ${state.appliedPromo ? `
             <button type="button" class="btn" style="background:var(--success-soft);color:var(--success);" onclick="removePromo()">${icon('checkCircle', 14)} Remove</button>

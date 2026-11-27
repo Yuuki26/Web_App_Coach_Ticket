@@ -39,7 +39,9 @@ public enum ErrorCode {
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR),
     // 503
     /** Live traffic can't be had right now (not set up, Google unreachable, or daily limit used up). */
-    TRAFFIC_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE);
+    TRAFFIC_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE),
+    /** An outside service we import from (e.g. OpenStreetMap's Overpass API) didn't answer. */
+    EXTERNAL_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE);
 
     private final HttpStatus status;
 

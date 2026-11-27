@@ -11,6 +11,8 @@ public interface RouteRepository extends JpaRepository<Route, Long>, JpaSpecific
 
     List<Route> findByPopularTrueAndActiveTrueOrderById();
 
+    List<Route> findByActiveTrueOrderById();
+
     @Query("select distinct r.origin from Route r where r.active = true order by r.origin")
     List<String> findCities();
 

@@ -111,6 +111,20 @@ class BookingFlowTests {
     }
 
     @Test
+    void bookingsCarryStationsCoachTypeAndVietnamesePaymentOptions() {
+        TripResponse trip = anyTrip(HCMC, "Phan Thiết");
+        String seat = freeSeat(trip, 3);
+
+        BookingResponse b = bookingService.create(new BookingRequest(trip.id(), "Lan Tran", "lan@example.com",
+                "+84 912 345 678", List.of(seat), null, PaymentMethod.EWALLET));
+
+        assertEquals(trip.id(), b.tripId());
+        assertEquals("Bến xe Miền Đông mới", b.originStation());
+        assertEquals("Bến xe Phan Thiết", b.destinationStation());
+        assertEquals(trip.coachType(), b.coachType());
+    }
+
+    @Test
     void lookupNeedsBothCodeAndEmail() {
         BookingResponse sample = bookingService.lookup(new BookingLookupRequest("hc-48213", "sam@example.com"));
         assertEquals("Completed", sample.status());

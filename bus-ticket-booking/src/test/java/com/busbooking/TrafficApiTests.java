@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -121,6 +122,19 @@ class TrafficApiTests {
         // A second visitor within 5 minutes gets the same answer without another (billed) request.
         mvc.perform(get("/api/v1/routes/{id}/traffic", routeId)).andExpect(status().isOk());
         assertEquals(before + 1, CALLS.get());
+    }
+
+    @Test
+    void routesPageListsEveryRouteWithPositionsAndAllowsTheLiveServerFrontend() throws Exception {
+        mvc.perform(get("/api/v1/routes").header("Origin", "http://127.0.0.1:5500"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://127.0.0.1:5500"))
+                .andExpect(jsonPath("$.length()").value(org.hamcrest.Matchers.greaterThanOrEqualTo(24)))
+                .andExpect(jsonPath("$[0].id").isNumber())
+                .andExpect(jsonPath("$[0].originStation").value("Bến xe Miền Đông mới"))
+                .andExpect(jsonPath("$[0].distanceKm").value(308))
+                .andExpect(jsonPath("$[0].originLat").isNumber())
+                .andExpect(jsonPath("$[0].destinationLng").isNumber());
     }
 
     @Test

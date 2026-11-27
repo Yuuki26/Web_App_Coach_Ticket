@@ -1,0 +1,65 @@
+/* =========================================================================
+ * 10. CITY BUSES SCREEN (reuses the Routes layout from 09-routes.css)
+ * ========================================================================= */
+.line-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 46px;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: 9px;
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.15);
+}
+
+.line-badge.big { min-width: 58px; height: 44px; font-size: 1.15rem; border-radius: 12px; }
+
+.line-badge.small { min-width: 34px; height: 24px; font-size: 0.75rem; border-radius: 6px; padding: 0 6px; }
+
+.bus-stop-list {
+  list-style: none;
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.bus-stop-list li + li { border-top: 1px solid var(--border); }
+
+.bus-stop-list button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.bus-stop-list button:hover { background: var(--bg); }
+
+.stop-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--navy);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+/* "City buses at this station" on the Routes screen */
+.station-buses { display: flex; flex-direction: column; gap: 8px; }
+
+.station-buses-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+
+.station-buses-row button { padding: 0; border-radius: 6px; }
+
+.station-buses-row button:hover .line-badge { filter: brightness(1.15); }

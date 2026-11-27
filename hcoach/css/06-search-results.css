@@ -1,0 +1,114 @@
+/* =========================================================================
+ * 6. SEARCH RESULTS SCREEN
+ * ========================================================================= */
+.sub-bar {
+  position: sticky;
+  top: 64px;
+  z-index: 35;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  padding: 12px 0;
+}
+
+.sub-bar-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.search-layout {
+  display: flex;
+  gap: 24px;
+  padding: 28px 0 48px;
+}
+
+.filter-sidebar {
+  display: none;
+  width: 265px;
+  flex-shrink: 0;
+}
+
+@media (min-width: 900px) {
+  .filter-sidebar { display: block; }
+}
+
+.mobile-filter-btn {
+  display: inline-flex;
+}
+
+@media (min-width: 900px) {
+  .mobile-filter-btn { display: none; }
+}
+
+.results-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sort-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sort-pill {
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  background: #fff;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  transition: all 0.15s;
+}
+
+.sort-pill.active {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
+
+.trip-card-top {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (min-width: 680px) {
+  .trip-card-top {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 0.87rem;
+  user-select: none;
+}
+
+.check-box {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 2px solid #CBD5E1;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.check-box.checked {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
